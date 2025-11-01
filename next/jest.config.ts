@@ -6,10 +6,10 @@ const createJestConfig = nextJest({
 })
 
 const config: Config = {
-    setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
+    setupFilesAfterEnv: ['next/jest.setup.ts'],
     testEnvironment: 'jest-environment-jsdom',
     moduleNameMapper: {
-        '^@/(.*)$': '<rootDir>/src/$1',
+        '^@/(.*)$': 'next/src/$1',
     },
     collectCoverageFrom: [
         'src/**/*.{js,jsx,ts,tsx}',
