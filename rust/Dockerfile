@@ -30,8 +30,8 @@ RUN apt-get update && \
 WORKDIR /app
 
 # Copy the binary from builder
-# COPY --from=builder /app/target/release/rust /app/server
 COPY --from=builder /app/target/release/workspace-rust /app/server
+
 # Expose port
 EXPOSE 8080
 
