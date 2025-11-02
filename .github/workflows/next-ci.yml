@@ -2,7 +2,7 @@ name: Next.js CI
 
 on:
   push:
-    branches: [main]
+    branches: [showcase, develop]
     paths:
       - "next/**"
       - ".github/workflows/next-ci.yml"
