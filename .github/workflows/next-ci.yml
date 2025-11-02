@@ -67,7 +67,7 @@ jobs:
 
       - name: Export static files
         working-directory: ./next
-        run: npm run build && npx next export
+        run: npm run build
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v4
