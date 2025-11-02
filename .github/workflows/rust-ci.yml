@@ -2,12 +2,12 @@ name: Rust CI
 
 on:
   push:
-    branches: [showcase, main, develop]
+    branches: [showcase, main]
     paths:
       - "rust/**"
       - ".github/workflows/rust-ci.yml"
   pull_request:
-    branches: [showcase, main, develop]
+    branches: [showcase, main]
     paths:
       - "rust/**"
 
