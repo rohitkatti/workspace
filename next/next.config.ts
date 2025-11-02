@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import next from "next";
 
 const nextConfig: NextConfig = {
   /* config options here */
@@ -34,3 +35,4 @@ const nextConfig: NextConfig = {
 };
 
 export default nextConfig;
+module.exports = nextConfig;
