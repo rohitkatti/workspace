@@ -116,6 +116,7 @@ fn process_proto() {
 
     tonic_build::configure()
         .file_descriptor_set_path(descriptor_path)
+        .out_dir(&out_dir)
         .compile(&proto_files, &[{ PROTOS_DIR }])
         .ok();
 }
