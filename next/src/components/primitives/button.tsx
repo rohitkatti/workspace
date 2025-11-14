@@ -1,6 +1,6 @@
 import * as LucideIcons from 'lucide-react';
 
-interface ButtonProps {
+export interface ButtonProps {
     onClick: () => void,
     label: string,
     icon?: {
@@ -12,7 +12,7 @@ interface ButtonProps {
     disabled?: boolean
 };
 
-const Button = (props: ButtonProps) => {
+export const Button = (props: ButtonProps) => {
     const { onClick, label, icon, pressed = false, disabled = false } = props;
 
     const renderIcon = () => {
@@ -46,5 +46,3 @@ const Button = (props: ButtonProps) => {
         </button>
     );
 };
-
-export default Button;

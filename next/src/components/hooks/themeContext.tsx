@@ -22,7 +22,7 @@ interface ThemeContext { }
 
 type PropsWithChildren = React.PropsWithChildren<ThemeContext>;
 
-export const AuthProvider: React.FC<PropsWithChildren> = ({ children }) => {
+export const ThemeProvider: React.FC<PropsWithChildren> = ({ children }) => {
     const [option, setOption] = useState<ThemeType>('dark');
 
     const toggleTheme = (themeType: ThemeType) => {

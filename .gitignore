@@ -45,3 +45,7 @@ rust/coverage/
 # WASM (for future)
 *.wasm
 wasm-pack.log
+
+# unknown
+target
+rust/protos/googleapis

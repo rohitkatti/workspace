@@ -1,14 +1,7 @@
-pub fn add(left: u64, right: u64) -> u64 {
-    left + right
-}
+// pub(crate) const FILE_DESCRIPTOR_SET: &[u8] = tonic::include_file_descriptor_set!("descriptor");
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+mod sys;
 
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
-    }
-}
+mod compute;
+
+mod orchestrator;

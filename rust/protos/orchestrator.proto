@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package orchestrator;
+
+service Orchestrator { rpc Send(ORequest) returns (OResponse); }
+
+enum Action {
+  CREATE = 0;
+  READ = 1;
+  UPDATE = 2;
+  DELETE = 3;
+}
+
+message ORequest {
+  Action action = 1;
+  string object = 2;
+  bytes payload = 3;
+}
+
+message OResponse {
+  bool status = 1;
+  string message = 2;
+  bytes payload = 3;
+}
