@@ -64,7 +64,8 @@ fn clone_external_repositories() {
     }
 }
 
-const PROTOS_DIR: &str = "protos";
+// const PROTOS_DIR: &str = "protos";
+// let protos_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("protos");
 
 fn get_list_of_files(dir: &str, ext: Option<&str>) -> Vec<String> {
     let path_ext = match ext {
@@ -104,7 +105,9 @@ fn process_proto() {
         ),
     );
 
-    let proto_files = get_list_of_files(PROTOS_DIR, Some("proto"));
+    let protos_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("protos");
+
+    let proto_files = get_list_of_files(protos_dir.to_str().unwrap(), Some("proto"));
     log_message(
         LogType::Process,
         format!(
@@ -116,7 +119,8 @@ fn process_proto() {
 
     tonic_build::configure()
         .file_descriptor_set_path(descriptor_path)
-        .compile(&proto_files, &[{ PROTOS_DIR }])
+        .out_dir(&out_dir)
+        .compile(&proto_files, &[{ protos_dir.to_str().unwrap() }])
         .ok();
 }
 
