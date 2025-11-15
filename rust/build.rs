@@ -160,6 +160,8 @@ fn process_proto() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    std::env::set_var("PROTOC", protobuf_src::protoc());
+
     fs::write(LOG_FILE, "").expect("Failed to clear log file");
     log_message(LogType::Process, "Starting build process...");
 
