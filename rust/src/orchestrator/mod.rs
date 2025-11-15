@@ -1,5 +1,6 @@
 #[cfg(test)]
 mod tests;
+
 tonic::include_proto!("orchestrator");
 
 use std::vec;
