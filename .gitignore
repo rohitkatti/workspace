@@ -49,3 +49,4 @@ wasm-pack.log
 # unknown
 target
 rust/protos/googleapis
+rust/build.log
