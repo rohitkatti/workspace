@@ -9,7 +9,7 @@ interface IThemeContext {
 
 const ThemeContext = createContext<IThemeContext | undefined>(undefined);
 
-export const useAppContext = () => {
+export const useThemeContext = () => {
     const context = useContext(ThemeContext);
     if (!context) {
         throw new Error("Theme Context should be used within a AppProvider");
@@ -30,6 +30,8 @@ export const ThemeProvider: React.FC<PropsWithChildren> = ({ children }) => {
     };
 
     return (
-        <ThemeContext.Provider value={{ option, toggleTheme }}></ThemeContext.Provider>
+        <ThemeContext.Provider value={{ option, toggleTheme }}>
+            {children}
+        </ThemeContext.Provider>
     )
 }

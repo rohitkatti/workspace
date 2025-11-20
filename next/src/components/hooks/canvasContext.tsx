@@ -110,6 +110,8 @@ export const CanvasProvider: React.FC<PropsWithChildren> = ({ children }) => {
     }), []);
 
     return (
-        <CanvasContext.Provider value={contextValue}></CanvasContext.Provider>
+        <CanvasContext.Provider value={contextValue}>
+            {children}
+        </CanvasContext.Provider>
     )
 }    

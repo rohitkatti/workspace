@@ -3,6 +3,8 @@ rust/target/
 rust/Cargo.lock
 **/*.rs.bk
 *.pdb
+rust/build.log
+rust/protos/googleapis
 
 # Next.js
 next/.next/
@@ -48,5 +50,3 @@ wasm-pack.log
 
 # unknown
 target
-rust/protos/googleapis
-rust/build.log

@@ -10,7 +10,7 @@ use orchestrator_server::Orchestrator;
 use tonic::{Request, Response, Status};
 
 #[derive(Default)]
-pub struct MyOrchestrator {}
+struct MyOrchestrator {}
 
 #[tonic::async_trait]
 impl Orchestrator for MyOrchestrator {
@@ -25,4 +25,8 @@ impl Orchestrator for MyOrchestrator {
 
         Ok(Response::new(response))
     }
+}
+
+pub fn get_service() -> orchestrator_server::OrchestratorServer<MyOrchestrator> {
+    orchestrator_server::OrchestratorServer::new(MyOrchestrator::default())
 }
