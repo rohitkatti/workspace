@@ -7,15 +7,17 @@ import { CanvasProvider } from '@components/hooks/canvasContext';
 import { LeftPanel } from '@/components/panels/leftPanel';
 
 export default function Home() {
+
   return (
-    <ThemeProvider>
-      <AppProvider>
-        <AuthProvider>
-          <CanvasProvider>
+    <div className="w-full h-screen overflow-hidden">
+      <ThemeProvider>
+        <AppProvider>
+          <AuthProvider>
             <LeftPanel />
-          </CanvasProvider>
-        </AuthProvider>
-      </AppProvider>
-    </ThemeProvider>
+            <CanvasProvider />
+          </AuthProvider>
+        </AppProvider>
+      </ThemeProvider>
+    </div >
   );
 }

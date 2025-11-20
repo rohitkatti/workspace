@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { act, useState } from 'react';
 import { Button, ButtonProps } from '../primitives/button';
 
 type PanelType =
@@ -27,9 +27,7 @@ export const LeftPanel = (props: LeftPanelProps) => {
     const settingsButtonProps: ButtonProps = {
         onClick: handleOptionClick('settings'),
         label: 'Settings',
-        icon: {
-            size: 24, name: 'Settings'
-        }
+        icon: { name: 'Settings', size: 24 }
     };
 
     const simulationButtonProps: ButtonProps = {
@@ -37,25 +35,61 @@ export const LeftPanel = (props: LeftPanelProps) => {
         label: 'Simulation'
     };
 
-    const closeButtonProps: ButtonProps = {
-        onClick: handleOptionClick(activePanel),
-        label: 'Close'
-    }
+    const sideBarCloseProps: ButtonProps = {
+        onClick: () => { setPanelOpen(false); setActivePanel(null); },
+        label: "Close Sidebar",
+        icon: { name: "ChevronLeft", size: 24 }
+    };
 
     const renderPanelContent = (): React.ReactNode => {
         return null;
     }
 
     return (
-        <div>
-            <div>
-                <Button {...settingsButtonProps} />
-                <Button {...simulationButtonProps} />
+        <>
+            <div style={
+                {
+                    alignItems: 'center',
+                    backdropFilter: 'blur(4px)',
+                    backgroundColor: 'rgba(31,41,55,0.9)',
+                    display: 'flex',
+                    flexDirection: 'column' as const,
+                    height: '100%',
+                    left: '0',
+                    padding: '16px 0',
+                    position: 'absolute' as const,
+                    top: '0',
+                    width: '64px',
+                    zIndex: 10,
+                }
+            }>
+                <div style={{
+                    display: 'flex',
+                    flexDirection: 'column' as const,
+                    gap: '16px',
+                }}>
+                    <Button {...settingsButtonProps} />
+                    <Button {...simulationButtonProps} />
+                </div>
             </div>
 
-            <div>
-                {renderPanelContent()}
+            <div style={{
+
+            }}>
+                <div style={{
+
+                }}>
+                    <h2>{activePanel ? activePanel.charAt(0).toUpperCase() + activePanel.slice(1) : ''}</h2>
+                    <Button {...sideBarCloseProps}></Button>
+                </div>
+
+                <div style={{
+                    height: '100%',
+                    overflowY: 'auto' as const,
+                }}>
+                    {renderPanelContent()}
+                </div>
             </div>
-        </div>
+        </>
     );
 }
