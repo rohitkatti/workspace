@@ -32,7 +32,8 @@ export const LeftPanel = (props: LeftPanelProps) => {
 
     const simulationButtonProps: ButtonProps = {
         onClick: handleOptionClick('simulation'),
-        label: 'Simulation'
+        label: 'Simulation',
+        icon: { name: 'CassetteTape', size: 24 }
     };
 
     const sideBarCloseProps: ButtonProps = {

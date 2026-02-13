@@ -32,6 +32,7 @@ export const CanvasProvider: React.FC<PropsWithChildren> = ({ children }) => {
     const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
     const isPlayingRef = useRef<boolean>(true);
     const sceneObjectsRef = useRef<Array<THREE.Mesh>>([]);
+    const pointCloudRef = useRef<THREE.Points | null>(null);
 
     const appContext = useAppContext();
 
@@ -79,6 +80,31 @@ export const CanvasProvider: React.FC<PropsWithChildren> = ({ children }) => {
             renderer.setSize(window.innerWidth, window.innerHeight);
         };
         window.addEventListener('resize', handleResize);
+
+        let isDragging = false;
+        let previousMousePosition = { x: 0, y: 0 };
+        const handleMouseDown = (e: MouseEvent) => {
+            isDragging = true;
+            previousMousePosition = {
+                x: e.clientX,
+                y: e.clientY
+            };
+        };
+        window.addEventListener('mousedown', handleMouseDown);
+
+        const handleMouseMove = (e: MouseEvent) => {
+            if (!isDragging || !camera) return;
+        };
+        window.addEventListener('mousemove', handleMouseMove);
+
+        const handleMouseUp = () => {
+            isDragging = false;
+        };
+        window.addEventListener('mouseup', handleMouseUp);
+
+        const handleWheel = (e: WheelEvent) => {
+        };
+        window.addEventListener('wheel', handleWheel);
 
         // Controls
         isPlayingRef.current = false;

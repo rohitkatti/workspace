@@ -1,6 +1,9 @@
+// use workspace_rust::sys::start_server;
+use workspace_rust::sys::start_server;
+
 #[tokio::main]
 async fn main() {
     println!("Hello, world!");
 
-    start_server().await;
+    let _ = start_server().await;
 }
