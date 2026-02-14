@@ -145,7 +145,7 @@ fn process_proto() -> Result<(), Box<dyn std::error::Error>> {
         ),
     );
 
-    // CRITICAL FIX: Use ? instead of .ok() to propagate errors
+    // Generate Rust code with tonic
     tonic_build::configure()
         .file_descriptor_set_path(&descriptor_path)
         .out_dir(&out_dir)
@@ -153,7 +153,76 @@ fn process_proto() -> Result<(), Box<dyn std::error::Error>> {
 
     log_message(
         LogType::Success,
-        &format!("Successfully compiled {} proto files", proto_files.len()),
+        &format!(
+            "Successfully compiled {} proto files for Rust",
+            proto_files.len()
+        ),
+    );
+
+    Ok(())
+}
+
+fn generate_typescript_client() -> Result<(), Box<dyn std::error::Error>> {
+    log_message(LogType::Process, "Generating TypeScript client code...");
+
+    let protos_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("protos");
+    // let ts_out_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("ts-client/generated");
+    let ts_out_dir = PathBuf::from("../next/src/grpc");
+
+    // Create output directory if it doesn't exist
+    fs::create_dir_all(&ts_out_dir)?;
+
+    let proto_files = get_list_of_files(protos_dir.to_str().unwrap(), Some("proto"))?;
+
+    for proto_file in &proto_files {
+        log_message(
+            LogType::Process,
+            &format!("Generating TypeScript for: {}", proto_file),
+        );
+
+        // Generate JavaScript code
+        let js_status = Command::new("protoc")
+            .args(&[
+                &format!(
+                    "--js_out=import_style=commonjs,binary:{}",
+                    ts_out_dir.display()
+                ),
+                &format!("--proto_path={}", protos_dir.display()),
+                proto_file,
+            ])
+            .status()?;
+
+        if !js_status.success() {
+            let err_msg = format!("Failed to generate JavaScript for {}", proto_file);
+            log_message(LogType::Failure, &err_msg);
+            return Err(err_msg.into());
+        }
+
+        // Generate TypeScript definitions and gRPC-Web client
+        let grpc_web_status = Command::new("protoc")
+            .args(&[
+                &format!(
+                    "--grpc-web_out=import_style=typescript,mode=grpcwebtext:{}",
+                    ts_out_dir.display()
+                ),
+                &format!("--proto_path={}", protos_dir.display()),
+                proto_file,
+            ])
+            .status()?;
+
+        if !grpc_web_status.success() {
+            let err_msg = format!("Failed to generate gRPC-Web client for {}", proto_file);
+            log_message(LogType::Failure, &err_msg);
+            return Err(err_msg.into());
+        }
+    }
+
+    log_message(
+        LogType::Success,
+        &format!(
+            "Successfully generated TypeScript client for {} proto files",
+            proto_files.len()
+        ),
     );
 
     Ok(())
@@ -171,8 +240,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     log_message(LogType::Process, "Cloning external dependencies...");
     clone_external_repositories()?;
 
-    log_message(LogType::Process, "Processing proto files...");
+    log_message(LogType::Process, "Processing proto files for Rust...");
     process_proto()?;
+
+    log_message(LogType::Process, "Generating TypeScript client...");
+    generate_typescript_client()?;
 
     log_message(LogType::Success, "Build process completed successfully!");
     Ok(())
