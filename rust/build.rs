@@ -39,7 +39,7 @@ const EXTERNAL_REPOS: &[(&str, &str)] = &[(
     "protos/googleapis",
 )];
 
-fn clone_external_repositories() {
+fn clone_external_repositories() -> Result<(), Box<dyn std::error::Error>> {
     for (repo_url, repo_dest) in EXTERNAL_REPOS {
         if std::path::Path::new(*repo_dest).exists() {
             log_message(
@@ -49,51 +49,68 @@ fn clone_external_repositories() {
             continue;
         }
 
+        log_message(
+            LogType::Process,
+            &format!("Cloning {} to {}", repo_url, repo_dest),
+        );
+
         let status = Command::new("git")
             .args(&["clone", *repo_url, *repo_dest])
-            .status()
-            .ok()
-            .unwrap();
+            .status()?;
 
         if !status.success() {
             log_message(
                 LogType::Failure,
                 &format!("Failed to clone repository: {}", *repo_url),
             );
+            return Err(format!("Git clone failed for {}", repo_url).into());
+        } else {
+            log_message(
+                LogType::Success,
+                &format!("Successfully cloned {}", repo_url),
+            );
         }
     }
+    Ok(())
 }
 
-const PROTOS_DIR: &str = "protos";
-
-fn get_list_of_files(dir: &str, ext: Option<&str>) -> Vec<String> {
+fn get_list_of_files(
+    dir: &str,
+    ext: Option<&str>,
+) -> Result<Vec<String>, Box<dyn std::error::Error>> {
     let path_ext = match ext {
         Some(e) => e.to_string(),
         None => "*".to_string(),
     };
 
-    log_message(
-        LogType::Warning,
-        format!("Processing dir: {:?}", dir).as_str(),
-    );
+    log_message(LogType::Process, &format!("Processing dir: {:?}", dir));
 
-    std::fs::read_dir(dir)
-        .unwrap()
+    if !std::path::Path::new(dir).exists() {
+        return Err(format!("Directory does not exist: {}", dir).into());
+    }
+
+    let files: Vec<String> = std::fs::read_dir(dir)?
         .filter_map(|entry| {
             let entry = entry.ok()?;
             let path = entry.path();
-
             if path_ext == "*" || path.extension()?.to_str()? == path_ext {
                 Some(path.to_str().unwrap().to_owned())
             } else {
                 None
             }
         })
-        .collect()
+        .collect();
+
+    log_message(
+        LogType::Success,
+        &format!("Found {} files with extension {:?}", files.len(), path_ext),
+    );
+
+    Ok(files)
 }
 
-fn process_proto() {
-    let out_dir = PathBuf::from(std::env::var("OUT_DIR").unwrap());
+fn process_proto() -> Result<(), Box<dyn std::error::Error>> {
+    let out_dir = PathBuf::from(std::env::var("OUT_DIR")?);
     let descriptor_path = out_dir.join("descriptor.bin");
 
     log_message(
@@ -104,33 +121,131 @@ fn process_proto() {
         ),
     );
 
-    let proto_files = get_list_of_files(PROTOS_DIR, Some("proto"));
+    let protos_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("protos");
+
+    if !protos_dir.exists() {
+        let err_msg = format!("Protos directory does not exist: {:?}", protos_dir);
+        log_message(LogType::Failure, &err_msg);
+        return Err(err_msg.into());
+    }
+
+    let proto_files = get_list_of_files(protos_dir.to_str().unwrap(), Some("proto"))?;
+
+    if proto_files.is_empty() {
+        let err_msg = format!("No .proto files found in {:?}", protos_dir);
+        log_message(LogType::Failure, &err_msg);
+        return Err(err_msg.into());
+    }
+
     log_message(
         LogType::Process,
-        format!(
+        &format!(
             "Following proto files are being processed: {:?}",
             proto_files
-        )
-        .as_str(),
+        ),
     );
 
+    // Generate Rust code with tonic
     tonic_build::configure()
-        .file_descriptor_set_path(descriptor_path)
-        .compile(&proto_files, &[{ PROTOS_DIR }])
-        .ok();
+        .file_descriptor_set_path(&descriptor_path)
+        .out_dir(&out_dir)
+        .compile(&proto_files, &[protos_dir.to_str().unwrap()])?;
+
+    log_message(
+        LogType::Success,
+        &format!(
+            "Successfully compiled {} proto files for Rust",
+            proto_files.len()
+        ),
+    );
+
+    Ok(())
+}
+
+fn generate_typescript_client() -> Result<(), Box<dyn std::error::Error>> {
+    log_message(LogType::Process, "Generating TypeScript client code...");
+
+    let protos_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("protos");
+    // let ts_out_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("ts-client/generated");
+    let ts_out_dir = PathBuf::from("../next/src/grpc");
+
+    // Create output directory if it doesn't exist
+    fs::create_dir_all(&ts_out_dir)?;
+
+    let proto_files = get_list_of_files(protos_dir.to_str().unwrap(), Some("proto"))?;
+
+    for proto_file in &proto_files {
+        log_message(
+            LogType::Process,
+            &format!("Generating TypeScript for: {}", proto_file),
+        );
+
+        // Generate JavaScript code
+        let js_status = Command::new("protoc")
+            .args(&[
+                &format!(
+                    "--js_out=import_style=commonjs,binary:{}",
+                    ts_out_dir.display()
+                ),
+                &format!("--proto_path={}", protos_dir.display()),
+                proto_file,
+            ])
+            .status()?;
+
+        if !js_status.success() {
+            let err_msg = format!("Failed to generate JavaScript for {}", proto_file);
+            log_message(LogType::Failure, &err_msg);
+            return Err(err_msg.into());
+        }
+
+        // Generate TypeScript definitions and gRPC-Web client
+        let grpc_web_status = Command::new("protoc")
+            .args(&[
+                &format!(
+                    "--grpc-web_out=import_style=typescript,mode=grpcwebtext:{}",
+                    ts_out_dir.display()
+                ),
+                &format!("--proto_path={}", protos_dir.display()),
+                proto_file,
+            ])
+            .status()?;
+
+        if !grpc_web_status.success() {
+            let err_msg = format!("Failed to generate gRPC-Web client for {}", proto_file);
+            log_message(LogType::Failure, &err_msg);
+            return Err(err_msg.into());
+        }
+    }
+
+    log_message(
+        LogType::Success,
+        &format!(
+            "Successfully generated TypeScript client for {} proto files",
+            proto_files.len()
+        ),
+    );
+
+    Ok(())
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    std::env::set_var("PROTOC", protobuf_src::protoc());
+
     fs::write(LOG_FILE, "").expect("Failed to clear log file");
-
     log_message(LogType::Process, "Starting build process...");
+
+    // Tell Cargo to rerun if proto files change
+    println!("cargo:rerun-if-changed=protos/");
+
     log_message(LogType::Process, "Cloning external dependencies...");
+    clone_external_repositories()?;
 
-    clone_external_repositories();
+    log_message(LogType::Process, "Processing proto files for Rust...");
+    process_proto()?;
 
-    log_message(LogType::Process, "Processing proto files ...");
+    log_message(LogType::Process, "Generating TypeScript client...");
+    generate_typescript_client()?;
 
-    process_proto();
-
+    log_message(LogType::Success, "Build process completed successfully!");
     Ok(())
 }

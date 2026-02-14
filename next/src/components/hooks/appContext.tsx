@@ -25,6 +25,8 @@ export const AppProvider: React.FC<PropsWithChildren> = ({ children }) => {
     }), []);
 
     return (
-        <AppContext.Provider value={contextValue}></AppContext.Provider>
+        <AppContext.Provider value={contextValue}>
+            {children}
+        </AppContext.Provider>
     )
 }

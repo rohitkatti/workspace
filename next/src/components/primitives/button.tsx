@@ -39,10 +39,42 @@ export const Button = (props: ButtonProps) => {
             onClick={onClick}
             disabled={disabled}
             title={label}
-            className={pressed ? 'pressed' : ''}
+            style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '4px',
+                padding: '8px',
+                backgroundColor: pressed ? 'rgba(59, 130, 246, 0.15)' : 'transparent',
+                border: 'none',
+                borderRadius: '8px',
+                color: pressed ? '#60a5fa' : '#9ca3af',
+                cursor: disabled ? 'not-allowed' : 'pointer',
+                opacity: disabled ? 0.5 : 1,
+                transition: 'all 0.2s ease',
+                minWidth: '48px',
+            }}
+            onMouseEnter={(e) => {
+                if (!disabled && !pressed) {
+                    e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.05)';
+                }
+            }}
+            onMouseLeave={(e) => {
+                if (!disabled && !pressed) {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                }
+            }}
         >
             {renderIcon()}
-            <span>{label}</span>
+            <span style={{
+                fontSize: '11px',
+                fontWeight: pressed ? '600' : '400',
+                textAlign: 'center',
+                whiteSpace: 'nowrap',
+            }}>
+                {label}
+            </span>
         </button>
     );
 };

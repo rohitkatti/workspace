@@ -11,6 +11,7 @@
     "test:coverage": "jest --coverage"
   },
   "dependencies": {
+    "@improbable-eng/grpc-web": "^0.15.0",
     "grpc-web": "^2.0.2",
     "lucide-react": "^0.552.0",
     "next": "16.0.1",
@@ -28,9 +29,12 @@
     "@types/react-dom": "^19",
     "@types/three": "^0.181.0",
     "babel-plugin-react-compiler": "1.0.0",
+    "baseline-browser-mapping": "^2.9.19",
+    "grpc-tools": "^1.13.1",
     "jest": "^29.7.0",
     "jest-environment-jsdom": "^29.7.0",
     "ts-node": "^10.9.2",
+    "ts-protoc-gen": "^0.15.0",
     "typescript": "^5"
   }
 }
