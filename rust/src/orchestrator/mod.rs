@@ -8,7 +8,6 @@ mod manager;
 tonic::include_proto!("orchestrator");
 
 use std::sync::LazyLock;
-use std::vec;
 
 use orchestrator_server::Orchestrator;
 
@@ -17,7 +16,7 @@ use tonic::{Request, Response, Status};
 #[derive(Default)]
 pub struct MyOrchestrator {}
 
-use factory::{Factory, IObject};
+use factory::Factory;
 
 static FACTORY: LazyLock<Factory> = LazyLock::new(|| Factory::new());
 

@@ -3,11 +3,11 @@ use std::collections::HashMap;
 
 #[derive(Clone)]
 pub struct IObject {
-    uid: String,
+    _uid: String,
 }
 
 impl IObject {
-    pub fn Execute(&self) {
+    pub fn _execute(&self) {
         println!("Executing IObject");
     }
 }
@@ -24,7 +24,7 @@ impl Factory {
         }
     }
 
-    pub fn register(&mut self, key: &str, object: IObject) {
+    pub fn _register(&mut self, key: &str, object: IObject) {
         self.objects.insert(key.to_string(), object);
     }
 

@@ -1,19 +1,21 @@
-use nalgebra::{Matrix4, Point3, Vector3};
+use nalgebra::{Point3, Vector3};
 
 use super::utils::is_positive;
 
+#[allow(dead_code)]
 pub struct Triangle {
     pub v0: Point3<f32>,
     pub v1: Point3<f32>,
     pub v2: Point3<f32>,
 }
 
+#[allow(dead_code)]
 trait PointExt {
     fn inside(&self, triangle: &Triangle) -> bool;
 }
 
 impl PointExt for Point3<f32> {
-    fn inside(&self, triangle: &Triangle) -> bool {
+    fn inside(&self, _triangle: &Triangle) -> bool {
         // let v0 = triangle.v1 - triangle.v0;
         // let v1 = triangle.v2 - triangle.v0;
         // let v2 = self - triangle.v0;
@@ -34,6 +36,7 @@ impl PointExt for Point3<f32> {
     }
 }
 
+#[allow(dead_code)]
 impl Triangle {
     pub fn normal(&self) -> Vector3<f32> {
         let edge1 = self.v1 - self.v0;
@@ -57,6 +60,7 @@ impl Triangle {
     }
 }
 
+#[allow(dead_code)]
 pub struct Surface {
     pub triangles: Vec<Triangle>,
 }

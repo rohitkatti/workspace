@@ -1,5 +1,5 @@
 use chrono::Local;
-use std::{fs, io::Write, path::PathBuf, process::Command};
+use std::{env::Args, fs, io::Write, path::PathBuf, process::Command};
 
 const LOG_FILE: &str = "build.log";
 
@@ -243,8 +243,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     log_message(LogType::Process, "Processing proto files for Rust...");
     process_proto()?;
 
-    log_message(LogType::Process, "Generating TypeScript client...");
-    generate_typescript_client()?;
+    let skip_ts_gen = std::env::var("SKIP_TS_GEN").is_ok();
+    if skip_ts_gen {
+        log_message(LogType::Process, "Skipping TypeScript client generation.");
+    } else {
+        log_message(LogType::Process, "Generating TypeScript client...");
+        generate_typescript_client()?;
+    }
 
     log_message(LogType::Success, "Build process completed successfully!");
     Ok(())

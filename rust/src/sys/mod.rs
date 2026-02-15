@@ -10,7 +10,7 @@ use crate::health;
 use crate::orchestrator;
 
 pub async fn start_server() -> Result<(), Box<dyn std::error::Error>> {
-    let addr = "[::1]:50051".parse()?;
+    let addr = "0.0.0.0:50051".parse()?;
 
     let reflection_service = Builder::configure()
         .register_encoded_file_descriptor_set(crate::FILE_DESCRIPTOR_SET)

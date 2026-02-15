@@ -1,39 +1,46 @@
-# Build stage
-FROM rust:1.75-slim as builder
+# Stage 1: Build
+FROM rust:latest AS builder
 
 WORKDIR /app
 
-# Copy manifests
+ENV SKIP_TS_GEN=true
+
+# Install build dependencies (cmake, protobuf compiler, etc.)
+RUN apt-get update && \
+    apt-get install -y \
+    cmake \
+    protobuf-compiler \
+    libprotobuf-dev \
+    pkg-config \
+    libssl-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy dependency manifests
 COPY Cargo.toml Cargo.lock ./
+COPY build.rs ./
 
-# Create a dummy main.rs to cache dependencies
-RUN mkdir src && \
-    echo "fn main() {}" > src/main.rs && \
-    cargo build --release && \
-    rm -rf src
-
-# Copy actual source code
+# Copy source code
 COPY src ./src
+COPY protos ./protos
 
-# Build the actual application
-RUN touch src/main.rs && \
-    cargo build --release
+# Build the release binary
+RUN cargo build --release
 
-# Runtime stage
 FROM debian:bookworm-slim
 
-# Install necessary runtime dependencies
+# Install runtime dependencies (OpenSSL is often needed for Tonic/gRPC)
 RUN apt-get update && \
-    apt-get install -y ca-certificates && \
+    apt-get install -y ca-certificates libc6 libssl3 && \
     rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# Copy the binary from builder
-COPY --from=builder /app/target/release/workspace-rust /app/server
+COPY --from=builder /app/target/release/grpcserver /app/grpcserver
 
-# Expose port
-EXPOSE 8080
+RUN chmod +x /app/grpcserver
 
-# Run the binary
-CMD ["/app/server"]
+# gRPC default port
+EXPOSE 50051
+
+# Use the "exec" form of CMD for better signal handling (Ctrl+C)
+CMD ["./grpcserver"]

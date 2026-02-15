@@ -2,11 +2,13 @@ use super::factory::IObject;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
+#[allow(dead_code)]
 pub struct Manager {
     live_objects: HashMap<String, Arc<Mutex<IObject>>>,
     dangling_objects: HashMap<String, Arc<Mutex<IObject>>>,
 }
 
+#[allow(dead_code)]
 impl Manager {
     pub fn new() -> Self {
         Self {

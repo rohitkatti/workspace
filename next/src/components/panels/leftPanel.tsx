@@ -32,44 +32,89 @@ export const LeftPanel = (props: LeftPanelProps) => {
 
     const handleDownloadServer = async () => {
         try {
-            // This would typically call your backend API to get the server package
-            const response = await fetch('/api/download-server', {
+            // Detect the user's platform and architecture
+            const platform = getPlatform();
+            if (!platform) {
+                alert('Unable to detect your platform. Supported platforms: Windows, macOS (Intel/ARM), Linux (x86_64/ARM64)');
+                return;
+            }
+
+            console.log(`Downloading server package for platform: ${platform}`);
+
+            // Call the API endpoint with the platform parameter
+            const response = await fetch(`/api/download-server?platform=${encodeURIComponent(platform)}`, {
                 method: 'GET',
             });
 
-            if (!response.ok) throw new Error('Download failed');
-
-            const blob = await response.blob();
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-
-            // Determine the filename based on the user's platform
-            const platform = navigator.platform.toLowerCase();
-            let filename = 'grpc-server';
-            if (platform.includes('win')) {
-                filename += '-windows.zip';
-            } else if (platform.includes('mac')) {
-                filename += '-macos.tar.gz';
-            } else {
-                filename += '-linux.tar.gz';
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.error || `Download failed with status ${response.status}`);
             }
 
-            a.download = filename;
-            document.body.appendChild(a);
-            a.click();
+            // Get the filename from the Content-Disposition header or construct it
+            const contentDisposition = response.headers.get('content-disposition');
+            let filename = `workspace-rust-${platform}.${platform.startsWith('windows') ? 'zip' : 'tar.gz'}`;
+            if (contentDisposition) {
+                const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
+                if (filenameMatch) {
+                    filename = filenameMatch[1];
+                }
+            }
+
+            // Download the file
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
             window.URL.revokeObjectURL(url);
-            document.body.removeChild(a);
+            document.body.removeChild(link);
+
+            console.log(`Server package downloaded: ${filename}`);
         } catch (error) {
             console.error('Failed to download server:', error);
-            alert('Failed to download server package. Please try again.');
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            alert(`Failed to download server package: ${errorMessage}\n\nPlease ensure the backend is running and the package is available.`);
         }
     };
 
-    const handleConnectToServer = async () => {
-        debugger; // Force breakpoint
-        console.log('handleConnectToServer called with port:', serverPort);
+    const getPlatform = (): string | null => {
+        // More robust platform detection
+        const userAgent = navigator.userAgent.toLowerCase();
+        const platform = navigator.platform.toLowerCase();
 
+        // Detect Windows
+        if (userAgent.includes('win') || platform.includes('win')) {
+            return 'windows-x86_64'; // Windows gRPC server is x86_64 only for now
+        }
+
+        // Detect macOS
+        if (userAgent.includes('mac') || platform.includes('mac')) {
+            // Try to detect ARM64 (Apple Silicon)
+            if (navigator.maxTouchPoints >= 1) {
+                // Touch support is a heuristic for Apple Silicon
+                return 'macos-arm64';
+            }
+            // Fallback: Try to detect via CPU count or use Intel version as fallback
+            // For better detection, consider checking navigator.hardwareConcurrency
+            return 'macos-intel'; // Default to Intel, but consider arm64 for M-series Macs
+        }
+
+        // Detect Linux
+        if (userAgent.includes('linux') || platform.includes('linux') || platform.includes('x11')) {
+            // Try to detect ARM64
+            if (userAgent.includes('aarch64') || userAgent.includes('arm64')) {
+                return 'linux-arm64';
+            }
+            return 'linux-x86_64';
+        }
+
+        return null;
+    };
+
+    const handleConnectToServer = async () => {
         setServerStatus('connecting');
 
         try {
@@ -95,7 +140,6 @@ export const LeftPanel = (props: LeftPanelProps) => {
             setServerStatus('connected');
             console.log('Server health check successful:', response);
         } catch (error) {
-            console.error('Failed to connect to server:', error);
             setServerStatus('error');
             alert('Cannot connect to local server. Make sure the server is running on port ' + serverPort);
         }

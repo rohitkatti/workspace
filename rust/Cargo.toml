@@ -7,6 +7,10 @@ edition = "2021"
 [lib]
 crate-type = ["cdylib", "rlib"]
 
+[[bin]]
+name = "grpcserver"
+path = "src/main.rs"
+
 [dependencies]
 tonic = "0.12"
 tonic-web = "0.12"

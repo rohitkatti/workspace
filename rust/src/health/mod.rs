@@ -7,9 +7,6 @@
 
 tonic::include_proto!("health");
 
-use std::sync::LazyLock;
-use std::vec;
-
 // use orchestrator_server::Orchestrator;
 use health_server::Health;
 
