@@ -52,4 +52,6 @@ wasm-pack.log
 # unknown
 target
 
-./fly.toml_
+fly.toml_
+
+env.txt
