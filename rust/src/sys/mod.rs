@@ -7,7 +7,6 @@ use tonic_web::GrpcWebLayer;
 use tower_http::cors::{Any, CorsLayer};
 
 use crate::health;
-use crate::orchestrator;
 
 pub async fn start_server() -> Result<(), Box<dyn std::error::Error>> {
     let addr = "0.0.0.0:50051".parse()?;
@@ -31,7 +30,7 @@ pub async fn start_server() -> Result<(), Box<dyn std::error::Error>> {
         .layer(cors)
         .layer(GrpcWebLayer::new())
         .add_service(reflection_service)
-        .add_service(orchestrator::get_service())
+        // .add_service(orchestrator::get_service())
         .add_service(health::get_service())
         .serve(addr)
         .await?;

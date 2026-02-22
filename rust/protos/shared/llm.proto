@@ -1,0 +1,87 @@
+syntax = "proto3";
+
+package shared.v1;
+
+import "shared/common.proto";
+import "shared/graph.proto";
+
+// LLMGateway provides services for structuring unstructured input into graphs and suggesting algorithms.
+service LLMGateway {
+    // Modules call this to structure free from into graphs
+  rpc StructureInput(StructureRequest) returns (StructureResponse);
+
+  // Modules call this to stream structured input as chunks
+  rpc StructureInputStream(StructureRequest) returns (stream StructureChunk);
+
+  // Modules call this to get algorithm suggestions based on a graph context and goal
+  rpc SuggestAlgorithms(AlgorithmSuggestionRequest) returns (AlgorithmSuggestionResponse);
+}
+
+message StructureRequest {
+  string            raw_input  = 1;
+  StructureTarget   target     = 2;
+  string            session_id = 3;
+  repeated Property hints      = 4;
+}
+
+enum StructureTarget {
+  STRUCTURE_TARGET_UNSPECIFIED = 0;
+  STRUCTURE_TARGET_CONCEPT     = 1;
+  STRUCTURE_TARGET_ENTITY      = 2;
+  STRUCTURE_TARGET_SCENARIO    = 3;
+  STRUCTURE_TARGET_ALGORITHM   = 4;
+}
+
+message StructureResponse {
+  Graph           graph      = 1;
+  double          confidence = 2;
+  repeated string warnings   = 3;
+  ResponseMeta    meta       = 4;
+}
+
+// message StructureChunk {
+//   string partial_json = 1;
+//   bool   is_final     = 2;
+// //   oneof chunk {
+// //     Graph           graph      = 1;
+// //     string          warning    = 2;
+// //   }
+// //   double          confidence = 3;
+// //   ResponseMeta    meta       = 4;
+// }
+
+message StructureChunk {
+  oneof payload {
+    GraphNode node    = 1;
+    GraphEdge edge    = 2;
+    string    warning = 3;
+  }
+  bool         is_final   = 4;
+  double       confidence = 5; // only meaningful when is_final = true
+  ResponseMeta meta       = 6; // only meaningful when is_final = true
+}
+
+message AlgorithmSuggestionRequest {
+  Graph      context = 1;
+  string     goal    = 2;
+  ModuleKind module  = 3;
+}
+
+message AlgorithmSuggestionResponse {
+  repeated AlgorithmSuggestion suggestions = 1;
+  ResponseMeta                 meta        = 2;
+}
+
+message AlgorithmSuggestion {
+  string            algorithm_id = 1;
+  string            name         = 2;
+  string            rationale    = 3;
+  double            confidence   = 4;
+  repeated Property parameters   = 5;
+}
+
+enum ModuleKind {
+  MK_UNSPECIFIED = 0;
+  MK_GEOMETRY    = 1;
+  MK_REASONING   = 2;
+}

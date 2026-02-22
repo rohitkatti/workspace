@@ -1,0 +1,53 @@
+syntax = "proto3";
+
+package shared.v1;
+
+import "shared/common.proto";
+
+message GraphNode {
+  string            id         = 1;
+  string            label      = 2;
+  NodeKind          kind       = 3;
+  repeated Property properties = 4;
+  NodePosition      position   = 5;
+}
+
+message GraphEdge {
+  string            id         = 1;
+  string            source_id  = 2;
+  string            target_id  = 3;
+  EdgeKind          kind       = 4;
+  double            weight     = 5;
+  repeated Property properties = 6;
+}
+
+message NodePosition {
+  double x = 1;
+  double y = 2;
+  double z = 3;
+}
+
+enum NodeKind {
+  NODE_KIND_UNSPECIFIED = 0;
+  NODE_KIND_CONCEPT     = 1;
+  NODE_KIND_ENTITY      = 2;
+  NODE_KIND_SCENARIO    = 3;
+  NODE_KIND_ALGORITHM   = 4;
+}
+
+enum EdgeKind {
+  EDGE_KIND_UNSPECIFIED = 0;
+  EDGE_KIND_INFLUENCES  = 1;
+  EDGE_KIND_DEPENDS_ON  = 2;
+  EDGE_KIND_ADJACENT    = 3;
+  EDGE_KIND_CONTAINS    = 4;
+  EDGE_KIND_CONFLICTS   = 5;
+  EDGE_KIND_SUPPORTS    = 6;
+}
+
+message Graph {
+  string             id    = 1;
+  repeated GraphNode nodes = 2;
+  repeated GraphEdge edges = 3;
+  repeated Property  meta  = 4;
+}

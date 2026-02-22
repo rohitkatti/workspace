@@ -1,16 +1,9 @@
-// #[cfg(test)]
-// mod tests;
-
-// mod factory;
-
-// mod manager;
-
-tonic::include_proto!("health");
-
-// use orchestrator_server::Orchestrator;
-use health_server::Health;
-
 use tonic::{Request, Response, Status};
+
+use crate::proto::shared::v1::{
+    health_server::{Health, HealthServer},
+    HealthCheckRequest, HealthCheckResponse,
+};
 
 #[derive(Default)]
 pub struct MyHealth {}
@@ -29,6 +22,7 @@ impl Health for MyHealth {
     }
 }
 
-pub fn get_service() -> health_server::HealthServer<MyHealth> {
-    health_server::HealthServer::new(MyHealth::default())
+pub fn get_service() -> HealthServer<MyHealth> {
+    // health_server::HealthServer::new(MyHealth::default())
+    HealthServer::new(MyHealth::default())
 }

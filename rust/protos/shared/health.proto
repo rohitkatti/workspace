@@ -1,8 +1,10 @@
 syntax = "proto3";
 
-package health;
+package shared.v1;
 
+// Health service definition for checking the health of the service.
 service Health {
+  // Modules call this to check if the service is healthy
   rpc Check(HealthCheckRequest) returns (HealthCheckResponse);
 }
 

@@ -25,6 +25,9 @@ export class ORequest extends jspb.Message {
   getBytesPayload_asB64(): string;
   setBytesPayload(value: Uint8Array | string): ORequest;
 
+  getJsonPayload(): string;
+  setJsonPayload(value: string): ORequest;
+
   getPayloadCase(): ORequest.PayloadCase;
 
   serializeBinary(): Uint8Array;
@@ -43,6 +46,7 @@ export namespace ORequest {
     numberPayload: number,
     booleanPayload: boolean,
     bytesPayload: Uint8Array | string,
+    jsonPayload: string,
   }
 
   export enum PayloadCase { 
@@ -51,6 +55,7 @@ export namespace ORequest {
     NUMBER_PAYLOAD = 4,
     BOOLEAN_PAYLOAD = 5,
     BYTES_PAYLOAD = 6,
+    JSON_PAYLOAD = 7,
   }
 
   export enum ObjectNameCase { 
@@ -80,6 +85,9 @@ export class OResponse extends jspb.Message {
   getBytesResult_asB64(): string;
   setBytesResult(value: Uint8Array | string): OResponse;
 
+  getJsonResult(): string;
+  setJsonResult(value: string): OResponse;
+
   getResultCase(): OResponse.ResultCase;
 
   serializeBinary(): Uint8Array;
@@ -98,6 +106,7 @@ export namespace OResponse {
     numberResult: number,
     booleanResult: boolean,
     bytesResult: Uint8Array | string,
+    jsonResult: string,
   }
 
   export enum ResultCase { 
@@ -106,6 +115,7 @@ export namespace OResponse {
     NUMBER_RESULT = 4,
     BOOLEAN_RESULT = 5,
     BYTES_RESULT = 6,
+    JSON_RESULT = 7,
   }
 }
 

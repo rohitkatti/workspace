@@ -1,0 +1,4 @@
+syntax = "proto3";
+package reasoning.v1;
+
+// Placeholder — reasoning service to be designed

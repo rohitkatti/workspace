@@ -77,7 +77,7 @@ if (goog.DEBUG && !COMPILED) {
  * @private {!Array<!Array<number>>}
  * @const
  */
-proto.orchestrator.ORequest.oneofGroups_ = [[3,4,5,6]];
+proto.orchestrator.ORequest.oneofGroups_ = [[3,4,5,6,7]];
 
 /**
  * @enum {number}
@@ -87,7 +87,8 @@ proto.orchestrator.ORequest.PayloadCase = {
   STRING_PAYLOAD: 3,
   NUMBER_PAYLOAD: 4,
   BOOLEAN_PAYLOAD: 5,
-  BYTES_PAYLOAD: 6
+  BYTES_PAYLOAD: 6,
+  JSON_PAYLOAD: 7
 };
 
 /**
@@ -133,7 +134,8 @@ objectName: (f = jspb.Message.getField(msg, 2)) == null ? undefined : f,
 stringPayload: (f = jspb.Message.getField(msg, 3)) == null ? undefined : f,
 numberPayload: (f = jspb.Message.getField(msg, 4)) == null ? undefined : f,
 booleanPayload: (f = jspb.Message.getBooleanField(msg, 5)) == null ? undefined : f,
-bytesPayload: msg.getBytesPayload_asB64()
+bytesPayload: msg.getBytesPayload_asB64(),
+jsonPayload: (f = jspb.Message.getField(msg, 7)) == null ? undefined : f
   };
 
   if (includeInstance) {
@@ -193,6 +195,10 @@ proto.orchestrator.ORequest.deserializeBinaryFromReader = function(msg, reader) 
     case 6:
       var value = /** @type {!Uint8Array} */ (reader.readBytes());
       msg.setBytesPayload(value);
+      break;
+    case 7:
+      var value = /** @type {string} */ (reader.readString());
+      msg.setJsonPayload(value);
       break;
     default:
       reader.skipField();
@@ -262,6 +268,13 @@ proto.orchestrator.ORequest.serializeBinaryToWriter = function(message, writer) 
   if (f != null) {
     writer.writeBytes(
       6,
+      f
+    );
+  }
+  f = /** @type {string} */ (jspb.Message.getField(message, 7));
+  if (f != null) {
+    writer.writeString(
+      7,
       f
     );
   }
@@ -490,6 +503,42 @@ proto.orchestrator.ORequest.prototype.hasBytesPayload = function() {
 };
 
 
+/**
+ * optional string json_payload = 7;
+ * @return {string}
+ */
+proto.orchestrator.ORequest.prototype.getJsonPayload = function() {
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 7, ""));
+};
+
+
+/**
+ * @param {string} value
+ * @return {!proto.orchestrator.ORequest} returns this
+ */
+proto.orchestrator.ORequest.prototype.setJsonPayload = function(value) {
+  return jspb.Message.setOneofField(this, 7, proto.orchestrator.ORequest.oneofGroups_[0], value);
+};
+
+
+/**
+ * Clears the field making it undefined.
+ * @return {!proto.orchestrator.ORequest} returns this
+ */
+proto.orchestrator.ORequest.prototype.clearJsonPayload = function() {
+  return jspb.Message.setOneofField(this, 7, proto.orchestrator.ORequest.oneofGroups_[0], undefined);
+};
+
+
+/**
+ * Returns whether this field is set.
+ * @return {boolean}
+ */
+proto.orchestrator.ORequest.prototype.hasJsonPayload = function() {
+  return jspb.Message.getField(this, 7) != null;
+};
+
+
 
 /**
  * Oneof group definitions for this message. Each group defines the field
@@ -499,7 +548,7 @@ proto.orchestrator.ORequest.prototype.hasBytesPayload = function() {
  * @private {!Array<!Array<number>>}
  * @const
  */
-proto.orchestrator.OResponse.oneofGroups_ = [[3,4,5,6]];
+proto.orchestrator.OResponse.oneofGroups_ = [[3,4,5,6,7]];
 
 /**
  * @enum {number}
@@ -509,7 +558,8 @@ proto.orchestrator.OResponse.ResultCase = {
   STRING_RESULT: 3,
   NUMBER_RESULT: 4,
   BOOLEAN_RESULT: 5,
-  BYTES_RESULT: 6
+  BYTES_RESULT: 6,
+  JSON_RESULT: 7
 };
 
 /**
@@ -555,7 +605,8 @@ message: jspb.Message.getFieldWithDefault(msg, 2, ""),
 stringResult: (f = jspb.Message.getField(msg, 3)) == null ? undefined : f,
 numberResult: (f = jspb.Message.getField(msg, 4)) == null ? undefined : f,
 booleanResult: (f = jspb.Message.getBooleanField(msg, 5)) == null ? undefined : f,
-bytesResult: msg.getBytesResult_asB64()
+bytesResult: msg.getBytesResult_asB64(),
+jsonResult: (f = jspb.Message.getField(msg, 7)) == null ? undefined : f
   };
 
   if (includeInstance) {
@@ -615,6 +666,10 @@ proto.orchestrator.OResponse.deserializeBinaryFromReader = function(msg, reader)
     case 6:
       var value = /** @type {!Uint8Array} */ (reader.readBytes());
       msg.setBytesResult(value);
+      break;
+    case 7:
+      var value = /** @type {string} */ (reader.readString());
+      msg.setJsonResult(value);
       break;
     default:
       reader.skipField();
@@ -684,6 +739,13 @@ proto.orchestrator.OResponse.serializeBinaryToWriter = function(message, writer)
   if (f != null) {
     writer.writeBytes(
       6,
+      f
+    );
+  }
+  f = /** @type {string} */ (jspb.Message.getField(message, 7));
+  if (f != null) {
+    writer.writeString(
+      7,
       f
     );
   }
@@ -891,6 +953,42 @@ proto.orchestrator.OResponse.prototype.clearBytesResult = function() {
  */
 proto.orchestrator.OResponse.prototype.hasBytesResult = function() {
   return jspb.Message.getField(this, 6) != null;
+};
+
+
+/**
+ * optional string json_result = 7;
+ * @return {string}
+ */
+proto.orchestrator.OResponse.prototype.getJsonResult = function() {
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 7, ""));
+};
+
+
+/**
+ * @param {string} value
+ * @return {!proto.orchestrator.OResponse} returns this
+ */
+proto.orchestrator.OResponse.prototype.setJsonResult = function(value) {
+  return jspb.Message.setOneofField(this, 7, proto.orchestrator.OResponse.oneofGroups_[0], value);
+};
+
+
+/**
+ * Clears the field making it undefined.
+ * @return {!proto.orchestrator.OResponse} returns this
+ */
+proto.orchestrator.OResponse.prototype.clearJsonResult = function() {
+  return jspb.Message.setOneofField(this, 7, proto.orchestrator.OResponse.oneofGroups_[0], undefined);
+};
+
+
+/**
+ * Returns whether this field is set.
+ * @return {boolean}
+ */
+proto.orchestrator.OResponse.prototype.hasJsonResult = function() {
+  return jspb.Message.getField(this, 7) != null;
 };
 
 

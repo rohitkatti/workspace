@@ -1,0 +1,4 @@
+syntax = "proto3";
+package geometry.v1;
+
+// Placeholder — geometry service to be designed

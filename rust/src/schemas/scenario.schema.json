@@ -1,0 +1,199 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "shared.v1.scenario",
+  "title": "Scenario",
+  "type": "object",
+  "required": [
+    "id",
+    "nodes",
+    "edges",
+    "meta"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9_-]+$"
+    },
+    "nodes": {
+      "type": "array",
+      "minItems": 2,
+      "items": {
+        "$ref": "#/$defs/ScenarioNode"
+      }
+    },
+    "edges": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/ScenarioEdge"
+      }
+    },
+    "meta": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/Property"
+      }
+    }
+  },
+  "$defs": {
+    "ScenarioNode": {
+      "type": "object",
+      "required": [
+        "id",
+        "label",
+        "kind"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9_-]+$"
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "CONCEPT",
+            "SCENARIO"
+          ]
+        },
+        "properties": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Property"
+          }
+        },
+        "position": {
+          "$ref": "#/$defs/NodePosition"
+        }
+      }
+    },
+    "ScenarioEdge": {
+      "type": "object",
+      "required": [
+        "id",
+        "source_id",
+        "target_id",
+        "kind",
+        "weight"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9_-]+$"
+        },
+        "source_id": {
+          "type": "string"
+        },
+        "target_id": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "INFLUENCES",
+            "DEPENDS_ON",
+            "CONFLICTS",
+            "SUPPORTS"
+          ]
+        },
+        "weight": {
+          "type": "number",
+          "minimum": -1.0,
+          "maximum": 1.0
+        },
+        "properties": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Property"
+          }
+        }
+      }
+    },
+    "Property": {
+      "type": "object",
+      "required": [
+        "key"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "key": {
+          "type": "string"
+        },
+        "string_payload": {
+          "type": "string"
+        },
+        "int_payload": {
+          "type": "integer"
+        },
+        "float_payload": {
+          "type": "number"
+        },
+        "boolean_payload": {
+          "type": "boolean"
+        },
+        "bytes_payload": {
+          "type": "string",
+          "contentEncoding": "base64"
+        },
+        "json_payload": {
+          "type": "string"
+        }
+      },
+      "oneOf": [
+        {
+          "required": [
+            "string_payload"
+          ]
+        },
+        {
+          "required": [
+            "int_payload"
+          ]
+        },
+        {
+          "required": [
+            "float_payload"
+          ]
+        },
+        {
+          "required": [
+            "boolean_payload"
+          ]
+        },
+        {
+          "required": [
+            "bytes_payload"
+          ]
+        },
+        {
+          "required": [
+            "json_payload"
+          ]
+        }
+      ]
+    },
+    "NodePosition": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "x": {
+          "type": "number"
+        },
+        "y": {
+          "type": "number"
+        },
+        "z": {
+          "type": "number"
+        }
+      }
+    }
+  }
+}
