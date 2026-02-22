@@ -18,6 +18,9 @@ pub async fn start_server() -> Result<(), Box<dyn std::error::Error>> {
     let llm_client: Box<dyn crate::llm::client::LlmClient> =
         crate::sys::llm_configure::get_llm_client();
 
+    let llm_reasoning_client: Box<dyn crate::llm::client::LlmClient> =
+        crate::sys::llm_configure::get_llm_client();
+
     let reflection_service = Builder::configure()
         .register_encoded_file_descriptor_set(crate::FILE_DESCRIPTOR_SET)
         .build_v1()?;
@@ -44,7 +47,7 @@ pub async fn start_server() -> Result<(), Box<dyn std::error::Error>> {
         .add_service(llm::get_service(llm_client))
         .add_service(health::get_service())
         .add_service(geometry::get_service())
-        .add_service(reasoning::get_service())
+        .add_service(reasoning::get_service(llm_reasoning_client))
         .serve(addr)
         .await?;
 

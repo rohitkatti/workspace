@@ -28,7 +28,13 @@ async-trait = "0.1.89"
 futures = "0.3.32"
 futures-core = "0.3.32"
 chrono = "0.4.41"
-
+uuid = { version = "1.21.0", features = ["v4"] }
+petgraph = "0.8.3"
+pasture-core = "0.4"
+pasture-io = "0.4"
+# parry3d = "0.17"
+# nalgebra = "0.32"
+# uuid = { version = "1", features = ["v4"] }
 [build-dependencies]
 tonic-build = "0.11"
 chrono = "0.4.41"
