@@ -6,7 +6,8 @@
     "required": [
         "id",
         "nodes",
-        "edges"
+        "edges",
+        "meta"
     ],
     "additionalProperties": false,
     "properties": {
@@ -41,7 +42,8 @@
             "required": [
                 "id",
                 "label",
-                "kind"
+                "kind",
+                "properties"
             ],
             "additionalProperties": false,
             "properties": {
@@ -55,11 +57,8 @@
                     "maxLength": 80
                 },
                 "kind": {
-                    "type": "string",
-                    "enum": [
-                        "CONCEPT",
-                        "SCENARIO"
-                    ]
+                    "type": "integer",
+                    "minimum": 0
                 },
                 "properties": {
                     "type": "array",
@@ -78,7 +77,9 @@
                 "id",
                 "source_id",
                 "target_id",
-                "kind"
+                "kind",
+                "weight",
+                "properties"
             ],
             "additionalProperties": false,
             "properties": {
@@ -93,13 +94,8 @@
                     "type": "string"
                 },
                 "kind": {
-                    "type": "string",
-                    "enum": [
-                        "INFLUENCES",
-                        "DEPENDS_ON",
-                        "CONFLICTS",
-                        "SUPPORTS"
-                    ]
+                    "type": "integer",
+                    "minimum": 0
                 },
                 "weight": {
                     "type": "number",

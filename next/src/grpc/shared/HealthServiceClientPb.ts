@@ -1,5 +1,5 @@
 /**
- * @fileoverview gRPC-Web generated client stub for shared.v1
+ * @fileoverview gRPC-Web generated client stub for health.v1
  * @enhanceable
  * @public
  */
@@ -40,7 +40,7 @@ export class HealthClient {
   }
 
   methodDescriptorCheck = new grpcWeb.MethodDescriptor(
-    '/shared.v1.Health/Check',
+    '/health.v1.Health/Check',
     grpcWeb.MethodType.UNARY,
     shared_health_pb.HealthCheckRequest,
     shared_health_pb.HealthCheckResponse,
@@ -68,7 +68,7 @@ export class HealthClient {
     if (callback !== undefined) {
       return this.client_.rpcCall(
         this.hostname_ +
-          '/shared.v1.Health/Check',
+          '/health.v1.Health/Check',
         request,
         metadata || {},
         this.methodDescriptorCheck,
@@ -76,7 +76,7 @@ export class HealthClient {
     }
     return this.client_.unaryCall(
     this.hostname_ +
-      '/shared.v1.Health/Check',
+      '/health.v1.Health/Check',
     request,
     metadata || {},
     this.methodDescriptorCheck);

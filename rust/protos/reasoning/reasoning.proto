@@ -1,4 +1,120 @@
 syntax = "proto3";
+
 package reasoning.v1;
 
-// Placeholder — reasoning service to be designed
+import "shared/common.proto";
+import "shared/graph.proto";
+
+// Reasoning service for building and analyzing causal graphs based on free-form hypotheses.
+service ReasoningService {
+  // Takes a free-form hypothesis, returns a structured causal graph
+  // (calls LLM gateway internally)
+  rpc BuildConceptGraph(BuildConceptGraphRequest) returns (BuildConceptGraphResponse);
+
+  // Run a scenario — propagate perturbations through the graph
+  rpc RunScenario(RunScenarioRequest) returns (RunScenarioResponse);
+
+  // Stream scenario propagation step by step
+  rpc RunScenarioStream(RunScenarioRequest) returns (stream ScenarioPropagationChunk);
+
+  // Get graph analytics — centrality, cycles, influence rankings
+  rpc AnalyzeGraph(AnalyzeGraphRequest) returns (AnalyzeGraphResponse);
+}
+
+// ── BuildConceptGraph ─────────────────────────────────────────────────────────
+
+message BuildConceptGraphRequest {
+  string                      raw_input  = 1;
+  string                      session_id = 2;
+  repeated shared.v1.Property hints      = 3;
+}
+
+message BuildConceptGraphResponse {
+  shared.v1.Graph        graph      = 1;
+  double                 confidence = 2;
+  repeated string        warnings   = 3;
+  shared.v1.ResponseMeta meta       = 4;
+}
+
+// ── RunScenario ───────────────────────────────────────────────────────────────
+
+message NodePerturbation {
+  string                node_id       = 1;
+  PerturbationDirection direction     = 2;
+  double                magnitude     = 3; // 0.0 - 1.0
+  double                initial_value = 4; // optional baseline
+}
+
+enum PerturbationDirection {
+  PERTURBATION_DIRECTION_UNSPECIFIED = 0;
+  PERTURBATION_DIRECTION_INCREASE    = 1;
+  PERTURBATION_DIRECTION_DECREASE    = 2;
+  PERTURBATION_DIRECTION_SET         = 3;
+}
+
+message RunScenarioRequest {
+  shared.v1.Graph           base_graph    = 1;
+  repeated NodePerturbation perturbations = 2;
+  string                    session_id    = 3;
+  ScenarioConfig            config        = 4;
+}
+
+message ScenarioConfig {
+  uint32 max_iterations    = 1; // propagation iterations, default 10
+  double convergence_delta = 2; // stop when delta < this, default 0.001
+  bool   detect_cycles     = 3;
+}
+
+message NodeState {
+  string node_id      = 1;
+  double value        = 2;
+  double delta        = 3; // change from baseline
+  bool   is_perturbed = 4; // true if this was a direct input perturbation
+}
+
+message RunScenarioResponse {
+  repeated NodeState     node_states = 1;
+  repeated string        warnings    = 2;
+  uint32                 iterations  = 3;
+  bool                   converged   = 4;
+  shared.v1.ResponseMeta meta        = 5;
+}
+
+message ScenarioPropagationChunk {
+  repeated NodeState node_states = 1;
+  uint32             iteration   = 2;
+  bool               is_final    = 3;
+  bool               converged   = 4;
+}
+
+// ── AnalyzeGraph ──────────────────────────────────────────────────────────────
+
+message AnalyzeGraphRequest {
+  shared.v1.Graph       base_graph = 1;
+  repeated AnalysisKind kinds      = 2;
+}
+
+enum AnalysisKind {
+  ANALYSIS_KIND_UNSPECIFIED   = 0;
+  ANALYSIS_KIND_CENTRALITY    = 1; // betweenness + degree centrality
+  ANALYSIS_KIND_CYCLES        = 2; // cycle detection
+  ANALYSIS_KIND_INFLUENCE     = 3; // most influential nodes by edge weight sum
+  ANALYSIS_KIND_SHORTEST_PATH = 4;
+}
+
+message NodeMetric {
+  string node_id = 1;
+  string metric  = 2;
+  double value   = 3;
+}
+
+message CycleResult {
+  repeated string node_ids = 1; // nodes forming the cycle
+}
+
+message AnalyzeGraphResponse {
+  repeated NodeMetric    metrics  = 1;
+  repeated CycleResult   cycles   = 2;
+  repeated string        warnings = 3;
+  shared.v1.ResponseMeta meta     = 4;
+}

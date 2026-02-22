@@ -27,6 +27,7 @@ jsonschema = "0.42.1"
 async-trait = "0.1.89"
 futures = "0.3.32"
 futures-core = "0.3.32"
+chrono = "0.4.41"
 
 [build-dependencies]
 tonic-build = "0.11"

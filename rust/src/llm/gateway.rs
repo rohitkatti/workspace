@@ -5,7 +5,7 @@ use tokio::time::sleep;
 use crate::llm::client::LlmClient;
 use crate::llm::schema_validator::{SchemaValidator, ValidationTarget};
 use crate::proto::shared::v1::Graph; // adjust path to match your generated proto types
-use crate::proto::shared::v1::{EdgeKind, NodeKind};
+use crate::proto::shared::v1::{EdgeKind, ModuleKind, NodeKind};
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -54,19 +54,7 @@ pub struct LlmGateway {
     schema_validator: SchemaValidator,
 }
 
-// pub struct LlmGateway {
-//     client: LlmClient, // your HTTP client wrapper
-//     schema_validator: SchemaValidator,
-// }
-
 impl LlmGateway {
-    // pub fn new(client: LlmClient) -> Self {
-    //     Self {
-    //         client,
-    //         schema_validator: SchemaValidator::new(),
-    //     }
-    // }
-
     pub fn new(client: Box<dyn LlmClient>) -> Self {
         Self {
             client,
@@ -148,8 +136,6 @@ impl LlmGateway {
             last_error,
         })
     }
-
-    // ── Prompt builders ──────────────────────────────────────────────────────
 
     fn build_initial_prompt(&self, raw_input: &str, target: &ValidationTarget) -> String {
         let schema = self.schema_for_prompt(target);
@@ -342,4 +328,151 @@ impl LlmGateway {
         }
         false
     }
+
+    fn build_algorithm_suggestion_prompt(
+        &self,
+        graph: &Graph,
+        goal: &str,
+        module: ModuleKind,
+    ) -> String {
+        let module_context = match module {
+            ModuleKind::Geometry => {
+                "geometry processing — polygons, meshes, point clouds, GIS data"
+            }
+            ModuleKind::Reasoning => {
+                "causal graph reasoning — influence propagation, centrality, cycle detection"
+            }
+            _ => "general computation",
+        };
+
+        let graph_summary = self.summarize_graph(graph);
+
+        format!(
+            "You are an algorithm recommendation engine for a {module_context} platform.\n\n\
+         Graph context:\n{graph_summary}\n\n\
+         User goal: {goal}\n\n\
+         Return a JSON array of algorithm suggestions. \
+         Each suggestion must match this schema exactly:\n\
+         {schema}\n\n\
+         Order by confidence descending. Return only the JSON array, no markdown.",
+            schema = include_str!("../schemas/algorithm_pipeline.schema.json")
+        )
+    }
+
+    #[allow(unused)]
+    fn build_algorithm_correction_prompt(
+        &self,
+        graph: &Graph,
+        goal: &str,
+        module: ModuleKind,
+        bad_output: &str,
+        error: &str,
+    ) -> String {
+        format!(
+            "Your previous response was invalid. Fix it.\n\n\
+         Error: {error}\n\n\
+         Your invalid response:\n{bad_output}\n\n\
+         Return only the corrected JSON array:"
+        )
+    }
+
+    fn summarize_graph(&self, graph: &Graph) -> String {
+        format!(
+            "Graph '{}' — {} nodes, {} edges",
+            graph.id,
+            graph.nodes.len(),
+            graph.edges.len()
+        )
+    }
+
+    pub async fn suggest_algorithms(
+        &self,
+        graph: &Graph,
+        goal: &str,
+        module: ModuleKind,
+    ) -> Result<Vec<AlgorithmSuggestionOutput>, GatewayError> {
+        let mut last_error = String::new();
+        let mut previous_output: Option<String> = None;
+
+        for attempt in 1..=MAX_RETRIES {
+            if attempt > 1 {
+                sleep(Duration::from_millis(RETRY_DELAY_MS)).await;
+            }
+
+            let prompt = match previous_output.as_deref() {
+                None => self.build_algorithm_suggestion_prompt(graph, goal, module),
+                Some(bad) => {
+                    self.build_algorithm_correction_prompt(graph, goal, module, bad, &last_error)
+                }
+            };
+
+            let raw = match self.client.complete(&prompt).await {
+                Ok(r) => r,
+                Err(e) => {
+                    last_error = format!("API error: {e}");
+                    continue;
+                }
+            };
+
+            let json: Value = match serde_json::from_str(&raw) {
+                Ok(v) => v,
+                Err(e) => {
+                    last_error = format!("Invalid JSON: {e}");
+                    previous_output = Some(raw);
+                    continue;
+                }
+            };
+
+            // Validate it's an array
+            let arr = match json.as_array() {
+                Some(a) => a,
+                None => {
+                    last_error = "Response is not a JSON array".into();
+                    previous_output = Some(raw);
+                    continue;
+                }
+            };
+
+            // Deserialize each suggestion
+            let suggestions: Vec<AlgorithmSuggestionOutput> =
+                match serde_json::from_value(Value::Array(arr.clone())) {
+                    Ok(s) => s,
+                    Err(e) => {
+                        last_error = format!("Deserialization failed: {e}");
+                        previous_output = Some(raw);
+                        continue;
+                    }
+                };
+
+            // Domain validate — must have at least one suggestion
+            if suggestions.is_empty() {
+                last_error = "No algorithm suggestions returned".into();
+                previous_output = Some(raw);
+                continue;
+            }
+
+            return Ok(suggestions);
+        }
+
+        Err(GatewayError::ExhaustedRetries {
+            attempts: MAX_RETRIES,
+            last_error,
+        })
+    }
+}
+
+// Add to output types section:
+#[derive(Debug, serde::Deserialize)]
+pub struct AlgorithmSuggestionOutput {
+    pub algorithm_id: String,
+    pub name: String,
+    pub rationale: String,
+    pub confidence: f64,
+    pub parameters: Vec<AlgorithmParameter>,
+}
+
+#[derive(Debug, serde::Deserialize)]
+pub struct AlgorithmParameter {
+    pub key: String,
+    pub value: String, // string representation, caller converts
 }

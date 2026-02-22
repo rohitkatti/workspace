@@ -1,8 +1,7 @@
 use chrono::Local;
-// use std::{env::Args, fs, io::Write, path::PathBuf, process::Command};
 use std::{fs, io::Write, path::PathBuf, process::Command};
 
-const LOG_FILE: &str = "build.log";
+const LOG_FILE: &str = "logs/build.log";
 
 enum LogType {
     Process,
@@ -28,7 +27,7 @@ fn log_message(t: LogType, message: &str) {
     writeln!(
         file,
         "{} {} :: {}",
-        Local::now().to_rfc3339(),
+        Local::now().format("%Y-%m-%d %H:%M:%S"),
         prefix,
         message
     )

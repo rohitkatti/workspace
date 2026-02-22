@@ -32,3 +32,10 @@ cargo build --target aarch64-apple-darwin --release
 cross build --release --target x86_64-unknown-linux-gnu
 cross build --release --target x86_64-pc-windows-gnu
 cross build --release --target aarch64-linux-android
+
+
+cat target/debug/build/workspace-rust-*/out/shared.v1.rs | grep -A 10 "enum StructureTarget"
+
+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
+
+grpcurl -plaintext localhost:50051 health.v1.Health/Check

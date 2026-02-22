@@ -7,8 +7,9 @@ use tonic::{Request, Response, Status};
 
 use crate::proto::shared::v1::{
     llm_gateway_server::{LlmGateway, LlmGatewayServer},
-    AlgorithmSuggestionRequest, AlgorithmSuggestionResponse, StructureChunk, StructureRequest,
-    StructureResponse, StructureTarget,
+    property::Value,
+    AlgorithmSuggestion, AlgorithmSuggestionRequest, AlgorithmSuggestionResponse, ModuleKind,
+    Property, StructureChunk, StructureRequest, StructureResponse, StructureTarget,
 };
 
 use futures::Stream;
@@ -104,8 +105,43 @@ impl LlmGateway for MyLlm {
         &self,
         request: Request<AlgorithmSuggestionRequest>,
     ) -> Result<Response<AlgorithmSuggestionResponse>, Status> {
-        let _inner = request.into_inner();
-        Ok(Response::new(AlgorithmSuggestionResponse::default()))
+        let inner = request.into_inner();
+
+        let graph = inner
+            .context
+            .ok_or_else(|| Status::invalid_argument("Missing graph context"))?;
+
+        let module = ModuleKind::try_from(inner.module).unwrap_or(ModuleKind::Unspecified);
+
+        let suggestions = self
+            .gateway
+            .suggest_algorithms(&graph, &inner.goal, module)
+            .await
+            .map_err(gateway_error_to_status)?;
+
+        // Convert to proto AlgorithmSuggestion messages
+        let proto_suggestions = suggestions
+            .into_iter()
+            .map(|s| AlgorithmSuggestion {
+                algorithm_id: s.algorithm_id,
+                name: s.name,
+                rationale: s.rationale,
+                confidence: s.confidence,
+                parameters: s
+                    .parameters
+                    .into_iter()
+                    .map(|p| Property {
+                        key: p.key,
+                        value: Some(Value::StringPayload(p.value)),
+                    })
+                    .collect(),
+            })
+            .collect();
+
+        Ok(Response::new(AlgorithmSuggestionResponse {
+            suggestions: proto_suggestions,
+            meta: None,
+        }))
     }
 }
 

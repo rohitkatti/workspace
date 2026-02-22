@@ -223,7 +223,7 @@ export enum StructureTarget {
   STRUCTURE_TARGET_ALGORITHM = 4,
 }
 export enum ModuleKind { 
-  MK_UNSPECIFIED = 0,
-  MK_GEOMETRY = 1,
-  MK_REASONING = 2,
+  MODULE_KIND_UNSPECIFIED = 0,
+  MODULE_KIND_GEOMETRY = 1,
+  MODULE_KIND_REASONING = 2,
 }

@@ -1803,9 +1803,9 @@ proto.shared.v1.StructureTarget = {
  * @enum {number}
  */
 proto.shared.v1.ModuleKind = {
-  MK_UNSPECIFIED: 0,
-  MK_GEOMETRY: 1,
-  MK_REASONING: 2
+  MODULE_KIND_UNSPECIFIED: 0,
+  MODULE_KIND_GEOMETRY: 1,
+  MODULE_KIND_REASONING: 2
 };
 
 goog.object.extend(exports, proto.shared.v1);

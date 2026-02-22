@@ -1,6 +1,6 @@
 use tonic::{Request, Response, Status};
 
-use crate::proto::shared::v1::{
+use crate::proto::health::v1::{
     health_server::{Health, HealthServer},
     HealthCheckRequest, HealthCheckResponse,
 };

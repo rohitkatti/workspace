@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package shared.v1;
+package health.v1;
 
 // Health service definition for checking the health of the service.
 service Health {

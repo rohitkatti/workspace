@@ -57,10 +57,8 @@
                     "maxLength": 80
                 },
                 "kind": {
-                    "type": "string",
-                    "enum": [
-                        "ALGORITHM"
-                    ]
+                    "type": "integer",
+                    "minimum": 0
                 },
                 "properties": {
                     "type": "array",
@@ -95,10 +93,8 @@
                     "type": "string"
                 },
                 "kind": {
-                    "type": "string",
-                    "enum": [
-                        "DEPENDS_ON"
-                    ]
+                    "type": "integer",
+                    "minimum": 0
                 },
                 "weight": {
                     "type": "number",
