@@ -1,5 +1,5 @@
 /**
- * @fileoverview gRPC-Web generated client stub for orchestrator
+ * @fileoverview gRPC-Web generated client stub for shared.v1
  * @enhanceable
  * @public
  */
@@ -8,7 +8,7 @@
 // versions:
 // 	protoc-gen-grpc-web v1.5.0
 // 	protoc              v5.29.3
-// source: orchestrator.proto
+// source: shared/health.proto
 
 
 /* eslint-disable */
@@ -17,10 +17,10 @@
 
 import * as grpcWeb from 'grpc-web';
 
-import * as orchestrator_pb from './orchestrator_pb'; // proto import: "orchestrator.proto"
+import * as shared_health_pb from '../shared/health_pb'; // proto import: "shared/health.proto"
 
 
-export class OrchestratorClient {
+export class HealthClient {
   client_: grpcWeb.AbstractClientBase;
   hostname_: string;
   credentials_: null | { [index: string]: string; };
@@ -39,47 +39,47 @@ export class OrchestratorClient {
     this.options_ = options;
   }
 
-  methodDescriptorSend = new grpcWeb.MethodDescriptor(
-    '/orchestrator.Orchestrator/Send',
+  methodDescriptorCheck = new grpcWeb.MethodDescriptor(
+    '/shared.v1.Health/Check',
     grpcWeb.MethodType.UNARY,
-    orchestrator_pb.ORequest,
-    orchestrator_pb.OResponse,
-    (request: orchestrator_pb.ORequest) => {
+    shared_health_pb.HealthCheckRequest,
+    shared_health_pb.HealthCheckResponse,
+    (request: shared_health_pb.HealthCheckRequest) => {
       return request.serializeBinary();
     },
-    orchestrator_pb.OResponse.deserializeBinary
+    shared_health_pb.HealthCheckResponse.deserializeBinary
   );
 
-  send(
-    request: orchestrator_pb.ORequest,
-    metadata?: grpcWeb.Metadata | null): Promise<orchestrator_pb.OResponse>;
+  check(
+    request: shared_health_pb.HealthCheckRequest,
+    metadata?: grpcWeb.Metadata | null): Promise<shared_health_pb.HealthCheckResponse>;
 
-  send(
-    request: orchestrator_pb.ORequest,
+  check(
+    request: shared_health_pb.HealthCheckRequest,
     metadata: grpcWeb.Metadata | null,
     callback: (err: grpcWeb.RpcError,
-               response: orchestrator_pb.OResponse) => void): grpcWeb.ClientReadableStream<orchestrator_pb.OResponse>;
+               response: shared_health_pb.HealthCheckResponse) => void): grpcWeb.ClientReadableStream<shared_health_pb.HealthCheckResponse>;
 
-  send(
-    request: orchestrator_pb.ORequest,
+  check(
+    request: shared_health_pb.HealthCheckRequest,
     metadata?: grpcWeb.Metadata | null,
     callback?: (err: grpcWeb.RpcError,
-               response: orchestrator_pb.OResponse) => void) {
+               response: shared_health_pb.HealthCheckResponse) => void) {
     if (callback !== undefined) {
       return this.client_.rpcCall(
         this.hostname_ +
-          '/orchestrator.Orchestrator/Send',
+          '/shared.v1.Health/Check',
         request,
         metadata || {},
-        this.methodDescriptorSend,
+        this.methodDescriptorCheck,
         callback);
     }
     return this.client_.unaryCall(
     this.hostname_ +
-      '/orchestrator.Orchestrator/Send',
+      '/shared.v1.Health/Check',
     request,
     metadata || {},
-    this.methodDescriptorSend);
+    this.methodDescriptorCheck);
   }
 
 }

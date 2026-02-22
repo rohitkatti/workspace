@@ -7,9 +7,15 @@ use tonic_web::GrpcWebLayer;
 use tower_http::cors::{Any, CorsLayer};
 
 use crate::health;
+use crate::llm;
+use crate::llm::providers::anthropic::AnthropicClient;
 
 pub async fn start_server() -> Result<(), Box<dyn std::error::Error>> {
     let addr = "0.0.0.0:50051".parse()?;
+
+    let api_key = std::env::var("ANTHROPIC_API_KEY").expect("ANTHROPIC_API_KEY must be set");
+
+    let llm_client = Box::new(AnthropicClient::new(api_key));
 
     let reflection_service = Builder::configure()
         .register_encoded_file_descriptor_set(crate::FILE_DESCRIPTOR_SET)
@@ -30,7 +36,7 @@ pub async fn start_server() -> Result<(), Box<dyn std::error::Error>> {
         .layer(cors)
         .layer(GrpcWebLayer::new())
         .add_service(reflection_service)
-        // .add_service(orchestrator::get_service())
+        .add_service(llm::get_service(llm_client))
         .add_service(health::get_service())
         .serve(addr)
         .await?;

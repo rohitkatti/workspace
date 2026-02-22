@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Button, ButtonProps } from '../primitives/button';
-import { HealthCheckRequest } from '@grpc/health_pb';
-import { HealthClient } from '@grpc/HealthServiceClientPb';
+import { HealthCheckRequest } from '@grpc/shared/health_pb';
+import { HealthClient } from '@grpc/shared/HealthServiceClientPb';
 
 type PanelType =
     'simulation' |
