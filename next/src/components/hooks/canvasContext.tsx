@@ -2,11 +2,17 @@ import { createContext, useCallback, useContext, useRef, useMemo, useEffect } fr
 import * as THREE from 'three';
 import { useAppContext } from "@components/hooks/appContext";
 
+import { renderGraphToScene, clearGraphFromScene } from '@components/utils/graphRenderer';
+import { Graph } from '@grpc/shared/graph_pb';
+
+
 interface ICanvasContext {
-    add: () => void,
-    rem: () => void,
-    mod: () => void
-};
+    add: (mesh: THREE.Mesh) => void;
+    rem: (mesh: THREE.Mesh) => void;
+    mod: (mesh: THREE.Mesh, update: (m: THREE.Mesh) => void) => void;
+    renderGraph: (graph: Graph) => void;
+    clearGraph: () => void;
+}
 
 const CanvasContext = createContext<ICanvasContext | undefined>(undefined);
 
@@ -34,110 +40,169 @@ export const CanvasProvider: React.FC<PropsWithChildren> = ({ children }) => {
     const sceneObjectsRef = useRef<Array<THREE.Mesh>>([]);
     const pointCloudRef = useRef<THREE.Points | null>(null);
 
+
+
     const appContext = useAppContext();
 
     useEffect(() => {
-        if (!mountRef.current) {
-            return;
-        }
+        if (!mountRef.current) return;
 
-        // Scene setup
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x1a1a2e);   // RK_TODO: Retrieve from theme?
+        scene.background = new THREE.Color(0x1a1a2e);
         sceneRef.current = scene;
 
-        // Camera setup
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const camera = new THREE.PerspectiveCamera(
+            75,
+            mountRef.current.clientWidth / mountRef.current.clientHeight,
+            0.1,
+            1000
+        );
         camera.position.set(0, 0, 15);
         cameraRef.current = camera;
 
-        // Renderer setup
         const renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setSize(
+            mountRef.current.clientWidth,
+            mountRef.current.clientHeight
+        );
         renderer.shadowMap.enabled = true;
         renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         rendererRef.current = renderer;
-
-        // attach renderer to mount
         mountRef.current.appendChild(renderer.domElement);
 
         // Lighting
-        const ambientLighting = new THREE.AmbientLight(0x404040, 0.6); // RK_TODO: Retrieve from theme?
-        scene.add(ambientLighting);
+        const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
+        scene.add(ambientLight);
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        dirLight.position.set(10, 10, 5);
+        dirLight.castShadow = true;
+        scene.add(dirLight);
 
-        // Directional Lighting
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8); // RK_TODO: Retrieve from theme?
-        directionalLight.position.set(10, 10, 5);
-        directionalLight.castShadow = true;
-        scene.add(directionalLight);
-
-        const handleResize = (): void => {
-            if (!camera || !renderer)
-                return;
-
-            camera.aspect = window.innerWidth / window.innerHeight;
+        // Resize handler
+        const handleResize = () => {
+            if (!mountRef.current || !camera || !renderer) return;
+            camera.aspect = mountRef.current.clientWidth / mountRef.current.clientHeight;
             camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setSize(
+                mountRef.current.clientWidth,
+                mountRef.current.clientHeight
+            );
         };
         window.addEventListener('resize', handleResize);
 
+        // Mouse orbit
         let isDragging = false;
-        let previousMousePosition = { x: 0, y: 0 };
-        const handleMouseDown = (e: MouseEvent) => {
-            isDragging = true;
-            previousMousePosition = {
-                x: e.clientX,
-                y: e.clientY
-            };
-        };
-        window.addEventListener('mousedown', handleMouseDown);
-
-        const handleMouseMove = (e: MouseEvent) => {
+        let prev = { x: 0, y: 0 };
+        const onMouseDown = (e: MouseEvent) => { isDragging = true; prev = { x: e.clientX, y: e.clientY }; };
+        const onMouseMove = (e: MouseEvent) => {
             if (!isDragging || !camera) return;
+            const dx = e.clientX - prev.x;
+            const dy = e.clientY - prev.y;
+            prev = { x: e.clientX, y: e.clientY };
+            // Simple orbit around origin
+            const spherical = new THREE.Spherical().setFromVector3(camera.position);
+            spherical.theta -= dx * 0.005;
+            spherical.phi -= dy * 0.005;
+            spherical.phi = Math.max(0.1, Math.min(Math.PI - 0.1, spherical.phi));
+            camera.position.setFromSpherical(spherical);
+            camera.lookAt(0, 0, 0);
         };
-        window.addEventListener('mousemove', handleMouseMove);
-
-        const handleMouseUp = () => {
-            isDragging = false;
+        const onMouseUp = () => { isDragging = false; };
+        const onWheel = (e: WheelEvent) => {
+            if (!camera) return;
+            camera.position.multiplyScalar(1 + e.deltaY * 0.001);
         };
-        window.addEventListener('mouseup', handleMouseUp);
+        window.addEventListener('mousedown', onMouseDown);
+        window.addEventListener('mousemove', onMouseMove);
+        window.addEventListener('mouseup', onMouseUp);
+        window.addEventListener('wheel', onWheel);
 
-        const handleWheel = (e: WheelEvent) => {
+        // Animation loop
+        let animFrameId: number;
+        const animate = () => {
+            animFrameId = requestAnimationFrame(animate);
+            if (sceneRef.current && cameraRef.current && rendererRef.current) {
+                rendererRef.current.render(sceneRef.current, cameraRef.current);
+            }
         };
-        window.addEventListener('wheel', handleWheel);
-
-        // Controls
-        isPlayingRef.current = false;
-        sceneObjectsRef.current = [];
+        animate();
 
         return () => {
+            cancelAnimationFrame(animFrameId);
+            window.removeEventListener('resize', handleResize);
+            window.removeEventListener('mousedown', onMouseDown);
+            window.removeEventListener('mousemove', onMouseMove);
+            window.removeEventListener('mouseup', onMouseUp);
+            window.removeEventListener('wheel', onWheel);
             if (mountRef.current && renderer.domElement) {
                 mountRef.current.removeChild(renderer.domElement);
             }
-
             renderer.dispose();
         };
     }, []);
 
-    const add = useCallback(() => {
+    // add/rem/mod — operate on sceneObjectsRef
+    const add = useCallback((mesh: THREE.Mesh) => {
+        sceneRef.current?.add(mesh);
+        sceneObjectsRef.current.push(mesh);
+    }, []);
 
-    }, [sceneObjectsRef.current]);
+    const rem = useCallback((mesh: THREE.Mesh) => {
+        sceneRef.current?.remove(mesh);
+        sceneObjectsRef.current = sceneObjectsRef.current.filter(m => m !== mesh);
+    }, []);
 
-    const rem = useCallback(() => {
+    const mod = useCallback((mesh: THREE.Mesh, update: (m: THREE.Mesh) => void) => {
+        update(mesh);
+    }, []);
 
-    }, [sceneObjectsRef.current]);
+    // Add to refs inside CanvasProvider:
+    const graphGroupRef = useRef<THREE.Group | null>(null);
 
-    const mod = useCallback(() => {
+    // Add renderGraph and clearGraph callbacks:
+    const clearGraph = useCallback(() => {
+        if (sceneRef.current && graphGroupRef.current) {
+            clearGraphFromScene(sceneRef.current, graphGroupRef.current);
+            graphGroupRef.current = null;
+        }
+    }, []);
 
-    }, [sceneObjectsRef.current]);
+    const renderGraph = useCallback((graph: Graph) => {
+        if (!sceneRef.current) return;
 
+        // Clear previous graph first
+        clearGraph();
+
+        const { group } = renderGraphToScene(graph, sceneRef.current);
+        graphGroupRef.current = group;
+
+        // Reposition camera to frame the graph
+        if (cameraRef.current) {
+            const nodeCount = graph.getNodesList().length;
+            const distance = Math.max(10, nodeCount * 1.5);
+            cameraRef.current.position.set(0, 0, distance);
+            cameraRef.current.lookAt(0, 0, 0);
+        }
+    }, [clearGraph]);
+
+    // Add to contextValue:
     const contextValue = useMemo((): ICanvasContext => ({
-        add, rem, mod
-    }), []);
+        add, rem, mod, renderGraph, clearGraph
+    }), [add, rem, mod, renderGraph, clearGraph]);
 
     return (
         <CanvasContext.Provider value={contextValue}>
+            {/* Mount point fills remaining space after left panel */}
+            <div
+                ref={mountRef}
+                style={{
+                    position: 'absolute',
+                    top: 0, left: 64,   // offset past icon bar
+                    right: 0, bottom: 0,
+                    overflow: 'hidden',
+                }}
+            />
             {children}
         </CanvasContext.Provider>
-    )
+    );
 }    

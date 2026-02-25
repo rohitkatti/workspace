@@ -88,11 +88,18 @@ impl LlmClient for OllamaClient {
                 let clean = parsed
                     .response
                     .trim()
+                    // Strip markdown code fences
                     .trim_start_matches("```json")
+                    .trim_start_matches("```JSON")
                     .trim_start_matches("```")
                     .trim_end_matches("```")
                     .trim()
                     .to_string();
+
+                // If still empty, return error
+                if clean.is_empty() {
+                    return Err(ClientError::Upstream("LLM returned empty response".into()));
+                }
 
                 Ok(clean)
             }

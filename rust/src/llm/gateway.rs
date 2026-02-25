@@ -90,15 +90,72 @@ impl LlmGateway {
                 }
             };
 
+            // TEMP: log raw output to stderr
+            // eprintln!("=== LLM RAW OUTPUT (attempt {attempt}) ===");
+            // eprintln!("{}", &raw);
+            // eprintln!("=== END RAW OUTPUT ===");
+
             // Stage 2: Parse JSON
-            let json: Value = match serde_json::from_str(&raw) {
+            // let json: Value = match serde_json::from_str(&raw) {
+            //     Ok(v) => v,
+            //     Err(e) => {
+            //         last_error = format!("Invalid JSON: {e}");
+            //         previous_output = Some(raw.to_owned());
+            //         continue;
+            //     }
+            // };
+            // Stage 2: Parse JSON
+            let mut json: Value = match serde_json::from_str(&raw) {
                 Ok(v) => v,
-                Err(e) => {
-                    last_error = format!("Invalid JSON: {e}");
-                    previous_output = Some(raw.to_owned());
-                    continue;
+                Err(_) => {
+                    // Fallback: try to extract JSON object from within the response
+                    // handles cases where Ollama adds preamble like "Here is the JSON: {...}"
+                    match Self::extract_json_object(&raw) {
+                        Some(v) => v,
+                        None => {
+                            last_error = format!("Invalid JSON: no JSON object found in response");
+                            previous_output = Some(raw);
+                            continue;
+                        }
+                    }
                 }
             };
+
+            // Stage 2.5: Unwrap common LLM wrapping patterns
+            // Handles: {"graph": {...}}, {"concept_graph": {...}}, {"result": {...}}, etc.
+            // Stage 2.5: Unwrap common LLM wrapping patterns
+            let unwrapped = if let Some(obj) = json.as_object() {
+                let keys: Vec<&str> = obj.keys().map(|k| k.as_str()).collect();
+
+                // Single-key wrapper containing "nodes"
+                if keys.len() == 1 {
+                    let inner = &obj[keys[0]];
+                    if inner.get("nodes").is_some() {
+                        Some(inner.clone())
+                    } else {
+                        None
+                    }
+                } else {
+                    // Multi-key — check common wrapper key names
+                    let mut found = None;
+                    for key in &["graph", "concept_graph", "result", "output", "data"] {
+                        if let Some(inner) = obj.get(*key) {
+                            if inner.get("nodes").is_some() {
+                                found = Some(inner.clone());
+                                break;
+                            }
+                        }
+                    }
+                    found
+                }
+            } else {
+                None
+            };
+
+            // Apply unwrap outside the borrow scope
+            if let Some(inner) = unwrapped {
+                json = inner;
+            }
 
             // Stage 3: Schema validation
             if let Err(e) = self.schema_validator.validate(&json, &target) {
@@ -133,37 +190,92 @@ impl LlmGateway {
 
         Err(GatewayError::ExhaustedRetries {
             attempts: MAX_RETRIES,
-            last_error,
+            last_error: last_error.clone(),
         })
     }
 
-    fn build_initial_prompt(&self, raw_input: &str, target: &ValidationTarget) -> String {
-        let schema = self.schema_for_prompt(target);
+    // fn build_initial_prompt(&self, raw_input: &str, target: &ValidationTarget) -> String {
+    //     let schema = self.schema_for_prompt(target);
+    //     format!(
+    //         "You are a structured data extraction engine. \
+    //          Return ONLY valid JSON matching this schema. \
+    //          No markdown, no preamble, no explanation.\n\n\
+    //          Schema:\n{schema}\n\n\
+    //          Input:\n{raw_input}"
+    //     )
+    // }
+    fn build_initial_prompt(&self, raw_input: &str, _target: &ValidationTarget) -> String {
         format!(
-            "You are a structured data extraction engine. \
-             Return ONLY valid JSON matching this schema. \
-             No markdown, no preamble, no explanation.\n\n\
-             Schema:\n{schema}\n\n\
-             Input:\n{raw_input}"
+            "You are a data extraction engine. Extract a causal graph from the input text.\n\
+            Output ONLY a JSON object. No explanation. No markdown. No code fences.\n\n\
+            The JSON must follow this exact structure:\n\
+            {{\n\
+            \"id\": \"short_snake_case_id\",\n\
+            \"nodes\": [\n\
+                {{\"id\": \"node_id\", \"label\": \"Node Label\", \"kind\": 1, \"properties\": []}}\n\
+            ],\n\
+            \"edges\": [\n\
+                {{\"id\": \"edge_id\", \"source_id\": \"node_a\", \"target_id\": \"node_b\", \"kind\": 1, \"weight\": -0.8, \"properties\": []}}\n\
+            ],\n\
+            \"meta\": []\n\
+            }}\n\n\
+            Rules:\n\
+            - kind for nodes is always 1\n\
+            - kind for edges is always 1\n\
+            - weight is a number from -1.0 to 1.0 (negative = reduces, positive = increases)\n\
+            - ids are snake_case\n\
+            - properties and meta are always empty arrays []\n\n\
+            Example input: Higher taxes reduce consumer spending which slows growth\n\
+            Example output:\n\
+            {{\"id\":\"tax_economy\",\"nodes\":[{{\"id\":\"taxes\",\"label\":\"Taxes\",\"kind\":1,\"properties\":[]}},{{\"id\":\"consumer_spending\",\"label\":\"Consumer Spending\",\"kind\":1,\"properties\":[]}},{{\"id\":\"growth\",\"label\":\"Economic Growth\",\"kind\":1,\"properties\":[]}}],\"edges\":[{{\"id\":\"e1\",\"source_id\":\"taxes\",\"target_id\":\"consumer_spending\",\"kind\":1,\"weight\":-0.8,\"properties\":[]}},{{\"id\":\"e2\",\"source_id\":\"consumer_spending\",\"target_id\":\"growth\",\"kind\":1,\"weight\":0.7,\"properties\":[]}}],\"meta\":[]}}\n\n\
+            Now extract the graph from this input and output only the JSON:\n\
+            {raw_input}\n\
+            "
         )
     }
 
+    fn extract_json_object(text: &str) -> Option<Value> {
+        let start = text.find('{')?;
+        let end = text.rfind('}')?;
+        if end <= start {
+            return None;
+        }
+        serde_json::from_str(&text[start..=end]).ok()
+    }
+
+    // fn build_correction_prompt(
+    //     &self,
+    //     raw_input: &str,
+    //     target: &ValidationTarget,
+    //     bad_output: &str,
+    //     error: &str,
+    // ) -> String {
+    //     let schema = self.schema_for_prompt(target);
+    //     format!(
+    //         "Your previous response was invalid. Fix it.\n\n\
+    //          Error: {error}\n\n\
+    //          Your invalid response:\n{bad_output}\n\n\
+    //          Required schema:\n{schema}\n\n\
+    //          Original input:\n{raw_input}\n\n\
+    //          Return only the corrected JSON object:"
+    //     )
+    // }
     fn build_correction_prompt(
         &self,
         raw_input: &str,
-        target: &ValidationTarget,
+        _target: &ValidationTarget,
         bad_output: &str,
         error: &str,
     ) -> String {
-        let schema = self.schema_for_prompt(target);
         format!(
-            "Your previous response was invalid. Fix it.\n\n\
-             Error: {error}\n\n\
-             Your invalid response:\n{bad_output}\n\n\
-             Required schema:\n{schema}\n\n\
-             Original input:\n{raw_input}\n\n\
-             Return only the corrected JSON object:"
-        )
+        "Your previous response was invalid.\n\
+         Error: {error}\n\n\
+         Your invalid response:\n{bad_output}\n\n\
+         Output ONLY a raw JSON object with this structure — no markdown, no explanation:\n\
+         {{\"id\":\"...\",\"nodes\":[{{\"id\":\"...\",\"label\":\"...\",\"kind\":1,\"properties\":[]}},...],\"edges\":[{{\"id\":\"...\",\"source_id\":\"...\",\"target_id\":\"...\",\"kind\":1,\"weight\":0.0,\"properties\":[]}},...],\"meta\":[]}}\n\n\
+         Original input:\n{raw_input}\n\
+         JSON:"
+    )
     }
 
     fn schema_for_prompt(&self, target: &ValidationTarget) -> &'static str {
@@ -413,13 +525,40 @@ impl LlmGateway {
                     continue;
                 }
             };
+            // TEMP: log raw output to stderr
+            // eprintln!("=== LLM RAW OUTPUT (attempt {attempt}) ===");
+            // eprintln!("{}", &raw);
+            // eprintln!("=== END RAW OUTPUT ===");
 
+            // let json: Value = match serde_json::from_str(&raw) {
+            //     Ok(v) => v,
+            //     Err(e) => {
+            //         last_error = format!("Invalid JSON: {e}");
+            //         previous_output = Some(raw);
+            //         continue;
+            //     }
+            // };
             let json: Value = match serde_json::from_str(&raw) {
                 Ok(v) => v,
-                Err(e) => {
-                    last_error = format!("Invalid JSON: {e}");
-                    previous_output = Some(raw);
-                    continue;
+                Err(_) => {
+                    // Try array extraction too
+                    let start = raw.find('[');
+                    let end = raw.rfind(']');
+                    match (start, end) {
+                        (Some(s), Some(e)) if e > s => match serde_json::from_str(&raw[s..=e]) {
+                            Ok(v) => v,
+                            Err(_) => {
+                                last_error = "Invalid JSON: no array found in response".into();
+                                previous_output = Some(raw);
+                                continue;
+                            }
+                        },
+                        _ => {
+                            last_error = "Invalid JSON: no array found in response".into();
+                            previous_output = Some(raw);
+                            continue;
+                        }
+                    }
                 }
             };
 
@@ -456,7 +595,7 @@ impl LlmGateway {
 
         Err(GatewayError::ExhaustedRetries {
             attempts: MAX_RETRIES,
-            last_error,
+            last_error: last_error.clone(),
         })
     }
 }

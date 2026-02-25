@@ -2,13 +2,16 @@ import { useState } from 'react';
 import { Button, ButtonProps } from '../primitives/button';
 import { HealthCheckRequest } from '@grpc/shared/health_pb';
 import { HealthClient } from '@grpc/shared/HealthServiceClientPb';
+import { useAppContext } from '@hooks/appContext';
+import { ReasoningPanel } from './reasoningPanel';
 
 type PanelType =
     'simulation' |
     'settings' |
+    'reasoning' |
     null;
 
-type ServerStatus = 'disconnected' | 'connecting' | 'connected' | 'error';
+// type ServerStatus = 'disconnected' | 'connecting' | 'connected' | 'error';
 
 interface LeftPanelProps {
 
@@ -17,7 +20,7 @@ interface LeftPanelProps {
 export const LeftPanel = (props: LeftPanelProps) => {
     const [activePanel, setActivePanel] = useState<PanelType>(null);
     const [panelOpen, setPanelOpen] = useState<boolean>(false);
-    const [serverStatus, setServerStatus] = useState<ServerStatus>('disconnected');
+    const appContext = useAppContext();
     const [serverPort, setServerPort] = useState<string>('50051');
 
     const handleOptionClick = (option: PanelType) => () => {
@@ -115,7 +118,7 @@ export const LeftPanel = (props: LeftPanelProps) => {
     };
 
     const handleConnectToServer = async () => {
-        setServerStatus('connecting');
+        appContext.setServerStatus('connecting');
 
         try {
             // Create the gRPC-Web client
@@ -137,20 +140,20 @@ export const LeftPanel = (props: LeftPanelProps) => {
                 });
             });
 
-            setServerStatus('connected');
+            appContext.setServerStatus('connected');
             console.log('Server health check successful:', response);
         } catch (error) {
-            setServerStatus('error');
+            appContext.setServerStatus('error');
             alert('Cannot connect to local server. Make sure the server is running on port ' + serverPort);
         }
     };
 
     const handleDisconnectFromServer = () => {
-        setServerStatus('disconnected');
+        appContext.setServerStatus('disconnected');
     };
 
     const getStatusColor = () => {
-        switch (serverStatus) {
+        switch (appContext.serverStatus) {
             case 'connected':
                 return '#4ade80'; // green
             case 'connecting':
@@ -163,7 +166,7 @@ export const LeftPanel = (props: LeftPanelProps) => {
     };
 
     const getStatusText = () => {
-        switch (serverStatus) {
+        switch (appContext.serverStatus) {
             case 'connected':
                 return 'Connected';
             case 'connecting':
@@ -185,6 +188,12 @@ export const LeftPanel = (props: LeftPanelProps) => {
         onClick: handleOptionClick('simulation'),
         label: 'Simulation',
         icon: { name: 'CassetteTape', size: 24 }
+    };
+
+    const reasoningButtonProps: ButtonProps = {
+        onClick: handleOptionClick('reasoning'),
+        label: 'Reasoning',
+        icon: { name: 'Lightbulb', size: 24 }
     };
 
     const sideBarCloseProps: ButtonProps = {
@@ -250,9 +259,9 @@ export const LeftPanel = (props: LeftPanelProps) => {
                                     </label>
                                     <input
                                         type="text"
-                                        value={serverPort}
-                                        onChange={(e) => setServerPort(e.target.value)}
-                                        disabled={serverStatus === 'connected' || serverStatus === 'connecting'}
+                                        value={appContext.serverPort}
+                                        onChange={(e) => appContext.setServerPort(e.target.value)}
+                                        disabled={appContext.serverStatus === 'connected' || appContext.serverStatus === 'connecting'}
                                         style={{
                                             backgroundColor: 'rgba(0,0,0,0.3)',
                                             border: '1px solid rgba(255,255,255,0.2)',
@@ -286,7 +295,7 @@ export const LeftPanel = (props: LeftPanelProps) => {
                                     📥 Download Server Package
                                 </button>
 
-                                {serverStatus === 'disconnected' || serverStatus === 'error' ? (
+                                {appContext.serverStatus === 'disconnected' || appContext.serverStatus === 'error' ? (
                                     <button
                                         onClick={handleConnectToServer}
                                         style={{
@@ -305,7 +314,7 @@ export const LeftPanel = (props: LeftPanelProps) => {
                                     >
                                         🔌 Connect to Local Server
                                     </button>
-                                ) : serverStatus === 'connected' ? (
+                                ) : appContext.serverStatus === 'connected' ? (
                                     <button
                                         onClick={handleDisconnectFromServer}
                                         style={{
@@ -344,7 +353,7 @@ export const LeftPanel = (props: LeftPanelProps) => {
                                 )}
                             </div>
 
-                            {serverStatus === 'connected' && (
+                            {appContext.serverStatus === 'connected' && (
                                 <div style={{
                                     marginTop: '16px',
                                     padding: '12px',
@@ -360,7 +369,7 @@ export const LeftPanel = (props: LeftPanelProps) => {
                         </div>
 
                         {/* Installation Instructions */}
-                        <div style={{ marginBottom: '24px' }}>
+                        {/* <div style={{ marginBottom: '24px' }}>
                             <h3 style={{
                                 color: '#ffffff',
                                 fontSize: '14px',
@@ -395,7 +404,7 @@ export const LeftPanel = (props: LeftPanelProps) => {
                                     💡 The server package includes all necessary dependencies and the Rust runtime.
                                 </div>
                             </div>
-                        </div>
+                        </div> */}
 
                         {/* General Settings */}
                         <div style={{ marginBottom: '24px' }}>
@@ -657,6 +666,8 @@ export const LeftPanel = (props: LeftPanelProps) => {
                     </div>
                 );
 
+            case 'reasoning':
+                return <ReasoningPanel />;
             default:
                 return null;
         }
@@ -686,6 +697,7 @@ export const LeftPanel = (props: LeftPanelProps) => {
                 }}>
                     <Button {...settingsButtonProps} />
                     <Button {...simulationButtonProps} />
+                    <Button {...reasoningButtonProps} />
                 </div>
             </div>
 

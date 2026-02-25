@@ -53,3 +53,5 @@ curl http://localhost:11434/api/generate -d '{
 
 OLLAMA_MODEL=qwen2.5:7b cargo run
 OLLAMA_MODEL=mistral:7b cargo run // for mac
+
+LLM_PROVIDER=OLLAMA OLLAMA_MODEL=mistral:7b cargo run

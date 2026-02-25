@@ -119,29 +119,121 @@ impl PipelineExecutor {
     // ── Algorithm dispatch — THIS IS YOURS TO IMPLEMENT ──────────────────────
     fn dispatch_algorithm(
         algorithm_id: &str,
-        _geometry: &LoadedGeometry,
-        _params: &[crate::proto::shared::v1::Property],
+        geometry: &LoadedGeometry,
+        params: &[crate::proto::shared::v1::Property],
     ) -> (bool, Vec<crate::proto::shared::v1::Property>) {
+        use crate::proto::shared::v1::{property::Value, Property};
+
+        let make_prop = |key: &str, val: &str| Property {
+            key: key.to_string(),
+            value: Some(Value::StringPayload(val.to_string())),
+        };
+
         match algorithm_id {
-            "convex_hull" => {
-                // TODO: implement using geo or parry3d
-                // let hull = parry3d::convex_hull(...);
-                (true, vec![])
-            }
-            "point_cloud_filter" => {
-                // TODO: implement using pasture
-                // let filtered = pasture_core::filter(...);
-                (true, vec![])
-            }
-            "mesh_simplify" => {
-                // TODO: implement using parry3d
-                (true, vec![])
-            }
             "bounding_box" => {
-                // TODO: compute from geometry stats
-                (true, vec![])
+                // Already computed in stats — return from stored stats
+                if let Some(bb) = &geometry.stats.bounding_box {
+                    (
+                        true,
+                        vec![
+                            make_prop("min_x", &bb.min_x.to_string()),
+                            make_prop("min_y", &bb.min_y.to_string()),
+                            make_prop("min_z", &bb.min_z.to_string()),
+                            make_prop("max_x", &bb.max_x.to_string()),
+                            make_prop("max_y", &bb.max_y.to_string()),
+                            make_prop("max_z", &bb.max_z.to_string()),
+                        ],
+                    )
+                } else {
+                    (false, vec![make_prop("error", "No bounding box available")])
+                }
             }
-            _unknown => (false, vec![]),
+
+            "point_count" => (
+                true,
+                vec![make_prop(
+                    "point_count",
+                    &geometry.stats.point_count.to_string(),
+                )],
+            ),
+
+            "vertex_count" => (
+                true,
+                vec![
+                    make_prop("vertex_count", &geometry.stats.vertex_count.to_string()),
+                    make_prop("face_count", &geometry.stats.face_count.to_string()),
+                ],
+            ),
+
+            "convex_hull" => {
+                // TODO: implement using parry3d
+                // Scaffold:
+                // use parry3d::transformation::convex_hull;
+                // let pts: Vec<Point3<f32>> = ...parse from geometry.raw_bytes...
+                // let hull = convex_hull(&pts);
+                // return (true, vec![make_prop("hull_vertex_count", &hull.vertices().len().to_string())])
+                (
+                    false,
+                    vec![make_prop("error", "convex_hull not yet implemented")],
+                )
+            }
+
+            "point_cloud_filter" => {
+                // TODO: implement using pasture-core
+                // Scaffold:
+                // use pasture_core::containers::BorrowedBuffer;
+                // Filter by classification, intensity threshold, return number etc.
+                // Params to read: "min_intensity", "classification", "max_distance"
+                let _min_intensity = params
+                    .iter()
+                    .find(|p| p.key == "min_intensity")
+                    .and_then(|p| {
+                        if let Some(Value::FloatPayload(f)) = &p.value {
+                            Some(*f)
+                        } else {
+                            None
+                        }
+                    })
+                    .unwrap_or(0.0);
+
+                (
+                    false,
+                    vec![make_prop("error", "point_cloud_filter not yet implemented")],
+                )
+            }
+
+            "mesh_simplify" => {
+                // TODO: implement mesh decimation
+                // parry3d doesn't have built-in simplification
+                // Consider: meshopt crate or implement quadric error metrics yourself
+                (
+                    false,
+                    vec![make_prop("error", "mesh_simplify not yet implemented")],
+                )
+            }
+
+            "gis_intersection" => {
+                // TODO: implement using sfcgal-rs or geo crate
+                // use geo::{Intersects, Polygon};
+                (
+                    false,
+                    vec![make_prop("error", "gis_intersection not yet implemented")],
+                )
+            }
+
+            "normal_estimation" => {
+                // TODO: estimate vertex normals from mesh faces
+                // use nalgebra to compute cross products per face
+                (
+                    false,
+                    vec![make_prop("error", "normal_estimation not yet implemented")],
+                )
+            }
+
+            unknown => (
+                false,
+                vec![make_prop("error", &format!("Unknown algorithm: {unknown}"))],
+            ),
         }
     }
 }
