@@ -5,6 +5,7 @@ rust/Cargo.lock
 *.pdb
 rust/build.log
 rust/protos/googleapis
+rust/logs/
 
 # Next.js
 next/.next/
@@ -50,3 +51,7 @@ wasm-pack.log
 
 # unknown
 target
+
+fly.toml_
+
+env.txt

@@ -31,7 +31,10 @@
       ],
       "@grpc/*": [
         "./src/grpc/*"
-      ]
+      ],
+      "@hooks/*": [
+        "./src/components/hooks/*"
+      ],
     }
   },
   "include": [

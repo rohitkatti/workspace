@@ -1,7 +1,7 @@
 use chrono::Local;
 use std::{fs, io::Write, path::PathBuf, process::Command};
 
-const LOG_FILE: &str = "build.log";
+const LOG_FILE: &str = "logs/build.log";
 
 enum LogType {
     Process,
@@ -27,7 +27,7 @@ fn log_message(t: LogType, message: &str) {
     writeln!(
         file,
         "{} {} :: {}",
-        Local::now().to_rfc3339(),
+        Local::now().format("%Y-%m-%d %H:%M:%S"),
         prefix,
         message
     )
@@ -74,39 +74,81 @@ fn clone_external_repositories() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+// fn get_list_of_files(
+//     dir: &str,
+//     ext: Option<&str>,
+// ) -> Result<Vec<String>, Box<dyn std::error::Error>> {
+//     let path_ext = match ext {
+//         Some(e) => e.to_string(),
+//         None => "*".to_string(),
+//     };
+
+//     log_message(LogType::Process, &format!("Processing dir: {:?}", dir));
+
+//     if !std::path::Path::new(dir).exists() {
+//         return Err(format!("Directory does not exist: {}", dir).into());
+//     }
+
+//     let files: Vec<String> = std::fs::read_dir(dir)?
+//         .filter_map(|entry| {
+//             let entry = entry.ok()?;
+//             let path = entry.path();
+//             if path_ext == "*" || path.extension()?.to_str()? == path_ext {
+//                 Some(path.to_str().unwrap().to_owned())
+//             } else {
+//                 None
+//             }
+//         })
+//         .collect();
+
+//     log_message(
+//         LogType::Success,
+//         &format!("Found {} files with extension {:?}", files.len(), path_ext),
+//     );
+
+//     Ok(files)
+// }
 fn get_list_of_files(
     dir: &str,
     ext: Option<&str>,
 ) -> Result<Vec<String>, Box<dyn std::error::Error>> {
-    let path_ext = match ext {
-        Some(e) => e.to_string(),
-        None => "*".to_string(),
-    };
-
     log_message(LogType::Process, &format!("Processing dir: {:?}", dir));
 
     if !std::path::Path::new(dir).exists() {
         return Err(format!("Directory does not exist: {}", dir).into());
     }
 
-    let files: Vec<String> = std::fs::read_dir(dir)?
-        .filter_map(|entry| {
-            let entry = entry.ok()?;
-            let path = entry.path();
-            if path_ext == "*" || path.extension()?.to_str()? == path_ext {
-                Some(path.to_str().unwrap().to_owned())
-            } else {
-                None
-            }
-        })
-        .collect();
+    let mut files = Vec::new();
+    collect_files(dir, ext, &mut files)?;
 
     log_message(
         LogType::Success,
-        &format!("Found {} files with extension {:?}", files.len(), path_ext),
+        &format!("Found {} files with extension {:?}", files.len(), ext),
     );
 
     Ok(files)
+}
+
+fn collect_files(
+    dir: &str,
+    ext: Option<&str>,
+    files: &mut Vec<String>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    for entry in std::fs::read_dir(dir)? {
+        let entry = entry?;
+        let path = entry.path();
+
+        if path.is_dir() {
+            collect_files(path.to_str().unwrap(), ext, files)?;
+        } else if let Some(required_ext) = ext {
+            if path.extension().and_then(|e| e.to_str()) == Some(required_ext) {
+                files.push(path.to_str().unwrap().to_owned());
+            }
+        } else {
+            files.push(path.to_str().unwrap().to_owned());
+        }
+    }
+    Ok(())
 }
 
 fn process_proto() -> Result<(), Box<dyn std::error::Error>> {
@@ -146,10 +188,25 @@ fn process_proto() -> Result<(), Box<dyn std::error::Error>> {
     );
 
     // Generate Rust code with tonic
+    // tonic_build::configure()
+    //     .file_descriptor_set_path(&descriptor_path)
+    //     .out_dir(&out_dir)
+    //     .compile(&proto_files, &[protos_dir.to_str().unwrap()])?;
+
     tonic_build::configure()
         .file_descriptor_set_path(&descriptor_path)
         .out_dir(&out_dir)
-        .compile(&proto_files, &[protos_dir.to_str().unwrap()])?;
+        .type_attribute(".", "#[derive(serde::Serialize, serde::Deserialize)]")
+        .compile(
+            &proto_files,
+            &[
+                protos_dir.to_str().unwrap(),
+                protos_dir.join("shared").to_str().unwrap(),
+                protos_dir.join("geometry").to_str().unwrap(),
+                protos_dir.join("reasoning").to_str().unwrap(),
+                protos_dir.join("googleapis").to_str().unwrap(),
+            ],
+        )?;
 
     log_message(
         LogType::Success,
@@ -243,8 +300,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     log_message(LogType::Process, "Processing proto files for Rust...");
     process_proto()?;
 
-    log_message(LogType::Process, "Generating TypeScript client...");
-    generate_typescript_client()?;
+    let skip_ts_gen = std::env::var("SKIP_TS_GEN").is_ok();
+    if skip_ts_gen {
+        log_message(LogType::Process, "Skipping TypeScript client generation.");
+    } else {
+        log_message(LogType::Process, "Generating TypeScript client...");
+        generate_typescript_client()?;
+    }
 
     log_message(LogType::Success, "Build process completed successfully!");
     Ok(())

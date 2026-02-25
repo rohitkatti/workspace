@@ -1,0 +1,156 @@
+syntax = "proto3";
+
+package geometry.v1;
+
+import "shared/common.proto";
+import "shared/graph.proto";
+
+// GeometryService handles geometry processing and analysis
+service GeometryService {
+  // Upload and process a geometry file — streams chunks from disk
+  rpc ProcessGeometry(stream GeometryChunk) returns (ProcessGeometryResponse);
+
+  // Stream processing results back to client (e.g. transformed mesh chunks)
+  rpc StreamGeometryResult(GeometryResultRequest) returns (stream GeometryResultChunk);
+
+  // Get algorithm suggestions for a geometry context and goal
+  rpc SuggestGeometryAlgorithms(SuggestGeometryAlgorithmsRequest) returns (SuggestGeometryAlgorithmsResponse);
+
+  // Execute a specific algorithm pipeline on an already-loaded geometry
+  rpc ExecutePipeline(ExecutePipelineRequest) returns (stream PipelineResultChunk);
+}
+
+// ── ProcessGeometry (client streaming) ───────────────────────────────────────
+
+message GeometryMeta {
+  string                      file_path  = 1; // path on server disk
+  GeometryFileKind            file_kind  = 2;
+  string                      session_id = 3;
+  string                      goal       = 4; // user's intent in plain text
+  repeated shared.v1.Property hints      = 5;
+}
+
+enum GeometryFileKind {
+  GEOMETRY_FILE_KIND_UNSPECIFIED = 0;
+  GEOMETRY_FILE_KIND_OBJ         = 1; // 3D mesh
+  GEOMETRY_FILE_KIND_STL         = 2; // 3D mesh
+  GEOMETRY_FILE_KIND_GLTF        = 3; // 3D mesh
+  GEOMETRY_FILE_KIND_LAS         = 4; // point cloud
+  GEOMETRY_FILE_KIND_LAZ         = 5; // point cloud compressed
+  GEOMETRY_FILE_KIND_COPC        = 6; // cloud optimized point cloud
+  GEOMETRY_FILE_KIND_GEOJSON     = 7; // 2D/3D geospatial
+  GEOMETRY_FILE_KIND_WKT         = 8; // well-known text geometry
+  GEOMETRY_FILE_KIND_SHAPEFILE   = 9; // GIS vector
+  GEOMETRY_FILE_KIND_TIFF        = 10; // raster GIS
+}
+
+message GeometryChunk {
+  oneof payload {
+    GeometryMeta meta = 1; // first message only — metadata header
+    bytes        data = 2; // subsequent messages — raw file bytes
+  }
+}
+
+message GeometryStats {
+  uint64                      vertex_count = 1;
+  uint64                      face_count   = 2;
+  uint64                      point_count  = 3; // point clouds
+  BoundingBox                 bounding_box = 4;
+  repeated shared.v1.Property extra        = 5;
+}
+
+message BoundingBox {
+  double min_x = 1;
+  double min_y = 2;
+  double min_z = 3;
+  double max_x = 4;
+  double max_y = 5;
+  double max_z = 6;
+}
+
+message ProcessGeometryResponse {
+  string                       geometry_id = 1; // stable ID for this loaded geometry
+  GeometryStats                stats       = 2;
+  shared.v1.Graph              scene_graph = 3; // LLM-structured scene
+  repeated AlgorithmSuggestion suggestions = 4; // initial algorithm suggestions
+  repeated string              warnings    = 5;
+  shared.v1.ResponseMeta       meta        = 6;
+}
+
+// ── StreamGeometryResult ──────────────────────────────────────────────────────
+
+message GeometryResultRequest {
+  string geometry_id = 1;
+  string session_id  = 2;
+}
+
+message GeometryResultChunk {
+  oneof payload {
+    bytes  data    = 1; // raw geometry bytes (transformed mesh etc)
+    string warning = 2;
+  }
+  bool   is_final = 3;
+  uint32 sequence = 4;
+}
+
+// ── SuggestGeometryAlgorithms ─────────────────────────────────────────────────
+
+message SuggestGeometryAlgorithmsRequest {
+  string        geometry_id = 1;
+  GeometryStats stats       = 2;
+  string        goal        = 3;
+  string        session_id  = 4;
+}
+
+message SuggestGeometryAlgorithmsResponse {
+  repeated AlgorithmSuggestion suggestions = 1;
+  shared.v1.ResponseMeta       meta        = 2;
+}
+
+message AlgorithmSuggestion {
+  string                      algorithm_id = 1;
+  string                      name         = 2;
+  string                      rationale    = 3;
+  double                      confidence   = 4;
+  GeometryDomain              domain       = 5;
+  repeated shared.v1.Property parameters   = 6;
+}
+
+enum GeometryDomain {
+  GEOMETRY_DOMAIN_UNSPECIFIED = 0;
+  GEOMETRY_DOMAIN_MESH        = 1;
+  GEOMETRY_DOMAIN_POINT_CLOUD = 2;
+  GEOMETRY_DOMAIN_GIS_2D      = 3;
+  GEOMETRY_DOMAIN_GIS_3D      = 4;
+}
+
+// ── ExecutePipeline ───────────────────────────────────────────────────────────
+
+message ExecutePipelineRequest {
+  string          geometry_id = 1;
+  shared.v1.Graph pipeline    = 2; // algorithm pipeline graph
+  string          session_id  = 3;
+}
+
+message PipelineResultChunk {
+  oneof payload {
+    PipelineStepResult step_result = 1;
+    string             warning     = 2;
+    PipelineSummary    summary     = 3; // final chunk only
+  }
+  bool   is_final = 4;
+  uint32 sequence = 5;
+}
+
+message PipelineStepResult {
+  string                      algorithm_id = 1;
+  bool                        success      = 2;
+  double                      duration_ms  = 3;
+  repeated shared.v1.Property outputs      = 4;
+}
+
+message PipelineSummary {
+  uint32 steps_completed   = 1;
+  uint32 steps_failed      = 2;
+  double total_duration_ms = 3;
+}

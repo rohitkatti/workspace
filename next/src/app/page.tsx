@@ -13,8 +13,9 @@ export default function Home() {
       <ThemeProvider>
         <AppProvider>
           <AuthProvider>
-            <LeftPanel />
-            <CanvasProvider />
+            <CanvasProvider >
+              <LeftPanel />
+            </CanvasProvider>
           </AuthProvider>
         </AppProvider>
       </ThemeProvider>
